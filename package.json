@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "export": "next export",
+    "dist": "npm run build && powershell -ExecutionPolicy Bypass -Command \"Remove-Item -Recurse -Force ../../dist/frontend -ErrorAction SilentlyContinue; Copy-Item -Recurse -Force .next/static ../../dist/frontend/; if (Test-Path .next/standalone) { Copy-Item -Recurse -Force .next/standalone ../../dist/frontend/ }\"",
     "start": "next start",
     "lint": "eslint"
   },

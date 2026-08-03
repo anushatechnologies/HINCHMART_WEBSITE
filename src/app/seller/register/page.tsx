@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Store, CheckCircle, ArrowRight } from 'lucide-react';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export default function SellerRegister() {
   const router = useRouter();
@@ -28,6 +30,19 @@ export default function SellerRegister() {
   const [emailOtp, setEmailOtp] = useState('');
   const [phoneOtp, setPhoneOtp] = useState('');
   const [otpMessage, setOtpMessage] = useState({ type: '', text: '' });
+  
+  // Firebase specific states
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [firebasePhoneToken, setFirebasePhoneToken] = useState('');
+
+  // Setup reCAPTCHA
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !(window as any).recaptchaVerifier) {
+      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible'
+      });
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -40,7 +55,22 @@ export default function SellerRegister() {
       return;
     }
     setOtpMessage({ type: '', text: '' });
+
+    if (type === 'PHONE') {
+      try {
+        const formattedPhone = target.startsWith('+91') ? target : `+91${target}`;
+        const appVerifier = (window as any).recaptchaVerifier;
+        const confirmation = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
+        setConfirmationResult(confirmation);
+        setPhoneOtpSent(true);
+        setOtpMessage({ type: 'success', text: 'Firebase SMS sent to ' + formattedPhone });
+      } catch (err: any) {
+        setOtpMessage({ type: 'error', text: 'Firebase error: ' + err.message });
+      }
+      return;
+    }
     
+    // EMAIL OTP logic remains unchanged (AWS SES)
     try {
       const res = await fetch('http://localhost:5000/api/auth/send-otp', {
         method: 'POST',
@@ -48,12 +78,11 @@ export default function SellerRegister() {
         body: JSON.stringify({ target, type })
       });
       const data = await res.json();
+
       if (data.success) {
-        if (type === 'EMAIL') setEmailOtpSent(true);
-        if (type === 'PHONE') setPhoneOtpSent(true);
-        // We log the mock OTP to console so the user can see it easily
-        console.log(`MOCK OTP for ${type}:`, data.mockOtp);
-        setOtpMessage({ type: 'success', text: `OTP sent to ${target} (Check console for mock OTP)` });
+        setEmailOtpSent(true);
+        console.log(`MOCK OTP for EMAIL:`, data.mockOtp);
+        setOtpMessage({ type: 'success', text: `OTP sent to ${target}` });
       } else {
         setOtpMessage({ type: 'error', text: data.message || 'Failed to send OTP' });
       }
@@ -71,6 +100,20 @@ export default function SellerRegister() {
       return;
     }
 
+    if (type === 'PHONE' && confirmationResult) {
+      try {
+        const result = await confirmationResult.confirm(otp);
+        const token = await result.user.getIdToken();
+        setFirebasePhoneToken(token);
+        setPhoneVerified(true);
+        setOtpMessage({ type: 'success', text: 'Phone verified successfully!' });
+      } catch (err: any) {
+        setOtpMessage({ type: 'error', text: 'Invalid Firebase OTP' });
+      }
+      return;
+    }
+
+    // Email Verify via Backend
     try {
       const res = await fetch('http://localhost:5000/api/auth/verify-otp', {
         method: 'POST',
@@ -79,9 +122,8 @@ export default function SellerRegister() {
       });
       const data = await res.json();
       if (data.success) {
-        if (type === 'EMAIL') setEmailVerified(true);
-        if (type === 'PHONE') setPhoneVerified(true);
-        setOtpMessage({ type: 'success', text: `${type} verified successfully!` });
+        setEmailVerified(true);
+        setOtpMessage({ type: 'success', text: `Email verified successfully!` });
       } else {
         setOtpMessage({ type: 'error', text: data.message || 'Invalid OTP' });
       }
@@ -99,7 +141,7 @@ export default function SellerRegister() {
       const res = await fetch('http://localhost:5000/api/vendors/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, firebasePhoneToken })
       });
       const data = await res.json();
 
@@ -119,6 +161,7 @@ export default function SellerRegister() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col py-12 sm:px-6 lg:px-8">
+      <div id="recaptcha-container"></div>
       <div className="sm:mx-auto sm:w-full sm:max-w-xl">
         <div className="flex justify-center mb-6">
           <div className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center shadow-xl">

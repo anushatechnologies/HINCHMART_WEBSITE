@@ -29,8 +29,8 @@ export default function LoginFlow() {
 
   // Setup reCAPTCHA
   useEffect(() => {
-    if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+    if (typeof window !== 'undefined' && !(window as any).recaptchaVerifier) {
+      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         size: 'invisible',
         callback: () => {
           // reCAPTCHA solved
@@ -51,7 +51,7 @@ export default function LoginFlow() {
     
     try {
       const phoneNumber = `+91${mobile}`;
-      const appVerifier = window.recaptchaVerifier;
+      const appVerifier = (window as any).recaptchaVerifier;
       const confirmation = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
       setConfirmationResult(confirmation);
       setStep(3); // Go to OTP verification

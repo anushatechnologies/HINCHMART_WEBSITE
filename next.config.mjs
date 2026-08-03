@@ -12,8 +12,12 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
         pathname: '/**',
-      }
+      },
     ],
+  },
+  // output: 'export', // disabled for server build
+  output: 'standalone',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
   },
 };
 
