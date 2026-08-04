@@ -89,7 +89,7 @@ export default function AnalyticsHub() {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
             <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2"><BarChart2 className="text-indigo-600"/> Top Performing Products</h3>
             <div className="space-y-4">
-              {data.products.topProducts.map((p: any, i: number) => (
+              {(data?.products?.topProducts || []).map((p: any, i: number) => (
                 <div key={i} className="flex items-center justify-between border-b border-slate-100 pb-4 last:border-0 last:pb-0">
                   <div className="flex items-center gap-4">
                     <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center font-bold text-slate-500 text-sm">#{i+1}</div>
@@ -104,7 +104,7 @@ export default function AnalyticsHub() {
                   </div>
                 </div>
               ))}
-              {data.products.topProducts.length === 0 && <p className="text-sm text-slate-500 text-center py-4">No sales data yet.</p>}
+              {(!data?.products?.topProducts || data.products.topProducts.length === 0) && <p className="text-sm text-slate-500 text-center py-4">No sales data yet.</p>}
             </div>
           </div>
 
