@@ -2,10 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import {
   IndianRupee, TrendingUp, TrendingDown, ShoppingBag,
-  ArrowUpRight, Target, Percent
+  ArrowUpRight, Target, Percent, Calendar, Download, ChevronRight, Activity, PieChart as PieChartIcon, ShoppingCart
 } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } }
+};
+
+const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981'];
 
 export default function SalesDashboard() {
   const [period, setPeriod] = useState('monthly');
@@ -41,154 +55,239 @@ export default function SalesDashboard() {
     }
   }, []);
 
-  const MAX_REVENUE = Math.max(...(data.monthlyData.length ? data.monthlyData : [1]));
-  const MAX_DAILY = Math.max(...(data.weeklyStats.length ? data.weeklyStats.map(d => d.revenue) : [1]));
-  const CHANNEL_COLORS = ['bg-blue-500', 'bg-purple-500', 'bg-amber-500'];
+  // Format data for Recharts
+  const areaChartData = data.monthlyLabels.map((label, idx) => ({
+    name: label,
+    revenue: data.monthlyData[idx] || 0,
+    orders: 0 // Mocked out because backend doesn't provide monthly orders yet
+  }));
+
+  const pieChartData = data.channels.length > 0 
+    ? data.channels.map(c => ({ name: c.label, value: c.percentage }))
+    : [];
+
+  const weeklyChartData = data.weeklyStats.length > 0
+    ? data.weeklyStats.map(d => ({ name: d.day, revenue: d.revenue }))
+    : [];
 
   return (
-    <div className="space-y-6">
+    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Sales Dashboard</h1>
-          <p className="text-slate-500 mt-1">Track your revenue performance and sales trends.</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Sales Analytics</h1>
+          <p className="text-slate-500 mt-2 flex items-center gap-2">
+            <Activity size={16} className="text-blue-500" /> Track your revenue performance and sales trends.
+          </p>
         </div>
-        <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
-          {['weekly', 'monthly', 'yearly'].map(p => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium capitalize transition-all ${period === p ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-900'}`}
-            >
-              {p}
-            </button>
-          ))}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center bg-slate-100/50 border border-slate-200 rounded-xl p-1 shadow-inner">
+            {['weekly', 'monthly', 'yearly'].map(p => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-5 py-2 rounded-lg text-sm font-bold capitalize transition-all ${period === p ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+          <button className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-xl shadow-lg shadow-slate-900/20 transition-all hover:-translate-y-0.5">
+            <Download size={16} /> Export
+          </button>
         </div>
-      </div>
+      </motion.div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Gross Revenue', value: data.kpis.grossRevenue, change: '+18.2%', up: true, icon: IndianRupee },
-          { label: 'Net Revenue', value: data.kpis.netRevenue, change: '+15.1%', up: true, icon: Target },
-          { label: 'Avg. Order Value', value: data.kpis.aov, change: '+8.4%', up: true, icon: ShoppingBag },
-          { label: 'Conversion Rate', value: data.kpis.conversionRate, change: '-0.2%', up: false, icon: Percent },
+          { label: 'Gross Revenue', value: data.kpis.grossRevenue, change: '+18.2%', up: true, icon: IndianRupee, color: 'from-emerald-500 to-teal-400' },
+          { label: 'Net Revenue', value: data.kpis.netRevenue, change: '+15.1%', up: true, icon: Target, color: 'from-blue-600 to-cyan-400' },
+          { label: 'Avg. Order Value', value: data.kpis.aov, change: '+8.4%', up: true, icon: ShoppingBag, color: 'from-purple-500 to-fuchsia-400' },
+          { label: 'Conversion Rate', value: data.kpis.conversionRate, change: '-0.2%', up: false, icon: Percent, color: 'from-amber-500 to-orange-400' },
         ].map(kpi => {
           const Icon = kpi.icon;
           return (
-            <div key={kpi.label} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                  <Icon size={20} className="text-slate-600" />
+            <motion.div key={kpi.label} variants={itemVariants} className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+              <div className={`absolute -right-10 -top-10 w-32 h-32 bg-gradient-to-br ${kpi.color} opacity-5 blur-2xl rounded-full group-hover:opacity-10 transition-opacity`} />
+              <div className="flex items-center justify-between mb-4 relative z-10">
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${kpi.color} shadow-lg flex items-center justify-center text-white`}>
+                  <Icon size={24} strokeWidth={2.5} />
                 </div>
-                <span className={`text-xs font-bold flex items-center gap-0.5 ${kpi.up ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {kpi.up ? <TrendingUp size={12} /> : <TrendingDown size={12} />} {kpi.change}
+                <span className={`text-xs font-bold flex items-center gap-1 px-2.5 py-1 rounded-md ${kpi.up ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                  {kpi.up ? <TrendingUp size={14} /> : <TrendingDown size={14} />} {kpi.change}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">{kpi.label}</p>
-              <p className="text-xl font-extrabold text-slate-900 mt-1">{kpi.value}</p>
-            </div>
+              <div className="relative z-10">
+                <p className="text-sm text-slate-500 font-semibold mb-1">{kpi.label}</p>
+                <p className="text-3xl font-black text-slate-900 tracking-tight">{kpi.value}</p>
+              </div>
+            </motion.div>
           );
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Monthly Revenue Bar Chart */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-base font-bold text-slate-900">Monthly Revenue</h2>
-            <span className="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full font-medium">Last 7 Months</span>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        {/* Main Revenue Chart */}
+        <motion.div variants={itemVariants} className="xl:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <TrendingUp size={20} className="text-emerald-500" /> Revenue vs Orders
+              </h2>
+              <p className="text-sm text-slate-500 mt-1">Comparing total revenue with order volume over time.</p>
+            </div>
+            <div className="flex items-center gap-4 text-sm font-semibold">
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500"></div> Revenue</div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div> Orders</div>
+            </div>
           </div>
-          <div className="flex items-end justify-between gap-2 h-44">
-            {data.monthlyData.map((val, i) => {
-              const height = (val / MAX_REVENUE) * 100;
-              const isLast = i === data.monthlyData.length - 1;
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                  <span className="text-[10px] text-slate-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                    ₹{(val / 1000).toFixed(0)}k
-                  </span>
-                  <div className="w-full rounded-t-md transition-all" style={{
-                    height: `${height}%`,
-                    background: isLast ? 'linear-gradient(to top, #dc2626, #ef4444)' : '#e2e8f0',
-                    minHeight: 8,
-                  }} />
-                  <span className="text-[10px] text-slate-500 font-medium">{data.monthlyLabels[i]}</span>
-                </div>
-              );
-            })}
+          <div className="h-[350px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={areaChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
+                <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} tickFormatter={(value) => `₹${value/1000}k`} />
+                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  formatter={(value: any, name: any) => [name === 'revenue' ? `₹${value?.toLocaleString() || 0}` : value, name === 'revenue' ? 'Revenue' : 'Orders']}
+                />
+                <Area yAxisId="left" type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                <Area yAxisId="right" type="monotone" dataKey="orders" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorOrders)" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Channel Breakdown */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <h2 className="text-base font-bold text-slate-900 mb-6">Revenue by Channel</h2>
-          <div className="space-y-5">
-            {data.channels.map((ch, i) => (
-              <div key={ch.label}>
-                <div className="flex items-center justify-between text-sm mb-1.5">
-                  <span className="font-medium text-slate-700">{ch.label}</span>
-                  <span className="font-bold text-slate-900">{ch.percentage}%</span>
+        {/* Breakdown Charts */}
+        <div className="space-y-8">
+          {/* Pie Chart */}
+          <motion.div variants={itemVariants} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+            <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+              <PieChartIcon size={20} className="text-purple-500" /> Sales by Channel
+            </h2>
+            <div className="h-[200px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieChartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {pieChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              {pieChartData.map((entry, index) => (
+                <div key={entry.name} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}></div>
+                  <div className="text-sm">
+                    <p className="font-semibold text-slate-900">{entry.value}%</p>
+                    <p className="text-xs text-slate-500">{entry.name}</p>
+                  </div>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-2.5">
-                  <div className={`h-2.5 rounded-full ${CHANNEL_COLORS[i % 3]} transition-all`} style={{ width: `${ch.percentage}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </motion.div>
 
-          <div className="mt-6 pt-5 border-t border-slate-100 space-y-3">
-            <h3 className="text-sm font-bold text-slate-700">This Week</h3>
-            {data.weeklyStats.map(d => (
-              <div key={d.day} className="flex items-center gap-3">
-                <span className="text-xs font-bold text-slate-500 w-7">{d.day}</span>
-                <div className="flex-1 bg-slate-100 rounded-full h-2">
-                  <div className="h-2 rounded-full bg-blue-400" style={{ width: `${(d.revenue / MAX_DAILY) * 100}%` }} />
-                </div>
-                <span className="text-xs text-slate-600 font-medium w-16 text-right">₹{(d.revenue / 1000).toFixed(1)}k</span>
-              </div>
-            ))}
-          </div>
+          {/* Bar Chart */}
+          <motion.div variants={itemVariants} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+            <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+              <Calendar size={20} className="text-blue-500" /> This Week's Revenue
+            </h2>
+            <div className="h-[200px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={weeklyChartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} tickFormatter={(value) => `₹${value/1000}k`} />
+                  <Tooltip 
+                    cursor={{fill: '#f8fafc'}}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    formatter={(value: any) => [`₹${value.toLocaleString()}`, 'Revenue']}
+                  />
+                  <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
         </div>
       </div>
 
-      {/* Recent Sales */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-900">Recent Sales</h2>
-          <Link href="/seller/dashboard/orders" className="text-sm font-medium text-red-600 hover:text-red-700 flex items-center gap-1">
-            View Orders <ArrowUpRight size={14} />
+      {/* Recent Sales Table */}
+      <motion.div variants={itemVariants} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <ShoppingBag size={20} className="text-amber-500" /> Recent Sales Details
+          </h2>
+          <Link href="/seller/dashboard/orders" className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 group">
+            View All Orders <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                {['Order ID', 'Customer', 'Products', 'Amount', 'Commission', 'Net Earned', 'Date'].map(h => (
-                  <th key={h} className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+              <tr className="bg-white text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">
+                {['Order ID', 'Customer', 'Products', 'Gross Amount', 'Platform Fee', 'Net Earned', 'Date'].map(h => (
+                  <th key={h} className="px-6 py-4">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 bg-white">
               {data.recentSales.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-6 text-slate-500 text-sm">No recent sales found.</td>
+                  <td colSpan={7} className="text-center py-12 text-slate-500">
+                    <div className="flex flex-col items-center justify-center">
+                      <ShoppingCart size={40} className="text-slate-300 mb-3" />
+                      <p className="font-medium">No recent sales found.</p>
+                    </div>
+                  </td>
                 </tr>
-              ) : data.recentSales.map(row => (
-                <tr key={row.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-3 text-sm font-mono font-semibold text-red-700">{row.id}</td>
-                  <td className="px-6 py-3 text-sm font-medium text-slate-900">{row.customer}</td>
-                  <td className="px-6 py-3 text-sm text-slate-600">{row.products} items</td>
-                  <td className="px-6 py-3 text-sm font-bold text-slate-900">{row.amount}</td>
-                  <td className="px-6 py-3 text-sm text-red-600">{row.commission}</td>
-                  <td className="px-6 py-3 text-sm font-bold text-emerald-700">{row.net}</td>
-                  <td className="px-6 py-3 text-sm text-slate-500">{row.date}</td>
-                </tr>
+              ) : data.recentSales.map((row, idx) => (
+                <motion.tr 
+                  key={row.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="hover:bg-slate-50/80 transition-colors cursor-pointer"
+                >
+                  <td className="px-6 py-4 text-sm font-bold text-slate-900">{row.id}</td>
+                  <td className="px-6 py-4 text-sm font-semibold text-slate-700">{row.customer}</td>
+                  <td className="px-6 py-4 text-sm text-slate-500 font-medium">
+                    <span className="bg-slate-100 rounded-lg px-2.5 py-1">{row.products} items</span>
+                  </td>
+                  <td className="px-6 py-4 text-sm font-black text-slate-900">{row.amount}</td>
+                  <td className="px-6 py-4 text-sm font-semibold text-red-500">
+                    <span className="bg-red-50 rounded-lg px-2.5 py-1">{row.commission}</span>
+                  </td>
+                  <td className="px-6 py-4 text-sm font-black text-emerald-600">{row.net}</td>
+                  <td className="px-6 py-4 text-sm text-slate-500 font-medium">{row.date}</td>
+                </motion.tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

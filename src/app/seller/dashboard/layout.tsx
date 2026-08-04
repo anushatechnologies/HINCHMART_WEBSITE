@@ -31,6 +31,7 @@ export default function SellerDashboardLayout({
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sellerName, setSellerName] = useState('Seller');
+  const [sellerStatus, setSellerStatus] = useState('PENDING');
 
   useEffect(() => {
     const token = localStorage.getItem('seller_token');
@@ -42,7 +43,15 @@ export default function SellerDashboardLayout({
     if (info) {
       try {
         const parsed = JSON.parse(info);
+        
+        // Enforce Onboarding flow
+        if (parsed.onboardingStep && parsed.onboardingStep < 9) {
+          router.push('/seller/onboarding');
+          return;
+        }
+
         setSellerName(parsed.companyName || parsed.ownerName || 'Seller');
+        setSellerStatus(parsed.status || 'PENDING');
       } catch (e) {}
     }
   }, [router]);
@@ -50,6 +59,7 @@ export default function SellerDashboardLayout({
   const handleLogout = () => {
     localStorage.removeItem('seller_token');
     localStorage.removeItem('seller_info');
+    document.cookie = 'seller_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
     router.push('/seller/login');
   };
 
@@ -100,7 +110,11 @@ export default function SellerDashboardLayout({
             </div>
             <div>
               <p className="text-sm font-semibold truncate w-40">{sellerName}</p>
-              <p className="text-xs text-green-400">Verified Seller</p>
+              {sellerStatus === 'ACTIVE' ? (
+                <p className="text-xs text-green-400">Verified Seller</p>
+              ) : (
+                <p className="text-xs text-amber-400">Pending Approval</p>
+              )}
             </div>
           </div>
         </div>

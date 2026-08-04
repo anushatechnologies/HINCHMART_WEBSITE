@@ -2,20 +2,27 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Settings, Store, Truck, CreditCard, Key, Webhook, Shield, Bell, Save, Plus, Trash2, Copy, Loader2, RefreshCw
+  Settings, Store, Truck, CreditCard, Key, Webhook, Shield, Bell, Save, Plus, Trash2, Copy, Loader2, RefreshCw, CheckCircle2,
+  ChevronRight, Lock, Eye, EyeOff, Globe
 } from 'lucide-react';
+import KycStatus from './KycStatus';
 
 const API = 'http://localhost:5000/api';
 
 const TABS = [
-  { key: 'general', label: 'General Info', icon: Store },
-  { key: 'shipping', label: 'Shipping', icon: Truck },
-  { key: 'payments', label: 'Payments', icon: CreditCard },
-  { key: 'apikeys', label: 'API Keys', icon: Key },
-  { key: 'webhooks', label: 'Webhooks', icon: Webhook },
-  { key: 'security', label: 'Security', icon: Shield },
+  { key: 'general', label: 'Store Identity', icon: Store, color: 'text-blue-500', bg: 'bg-blue-50' },
+  { key: 'shipping', label: 'Shipping & Delivery', icon: Truck, color: 'text-amber-500', bg: 'bg-amber-50' },
+  { key: 'payments', label: 'Payments & Billing', icon: CreditCard, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+  { key: 'apikeys', label: 'API Keys', icon: Key, color: 'text-purple-500', bg: 'bg-purple-50' },
+  { key: 'webhooks', label: 'Webhooks', icon: Webhook, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+  { key: 'security', label: 'Security', icon: Shield, color: 'text-red-500', bg: 'bg-red-50' },
+  { key: 'kyc', label: 'KYC & Verification', icon: CheckCircle2, color: 'text-teal-500', bg: 'bg-teal-50' },
 ];
+
+const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+const contentVariants = { hidden: { opacity: 0, x: 20 }, show: { opacity: 1, x: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } } };
 
 export default function SettingsHub() {
   const router = useRouter();
@@ -127,258 +134,426 @@ export default function SettingsHub() {
   };
 
   if (loading && !settings) {
-    return <div className="flex justify-center items-center h-[500px]"><Loader2 className="animate-spin text-slate-800" size={40} /></div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-[70vh] bg-slate-50/50 rounded-3xl">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+          <Settings size={24} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-slate-400" />
+        </div>
+        <p className="mt-4 text-slate-500 font-medium">Loading settings...</p>
+      </div>
+    );
   }
 
   if (!settings) return null;
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Master Settings</h1>
-          <p className="text-slate-500 mt-1">Configure your store, shipping, API access, and security.</p>
-        </div>
-        <button onClick={loadData} className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors bg-white shadow-sm">
-          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
-        </button>
-      </div>
+  const activeTabConfig = TABS.find(t => t.key === tab) || TABS[0];
+  const ActiveIcon = activeTabConfig.icon;
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row min-h-[600px]">
-        {/* Navigation Sidebar */}
-        <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-slate-200 bg-slate-50/50 flex flex-row md:flex-col p-4 gap-2 overflow-x-auto no-scrollbar shrink-0">
-          {TABS.map(t => {
-            const Icon = t.icon;
-            return (
-              <button key={t.key} onClick={() => setTab(t.key)}
-                className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg transition-all whitespace-nowrap text-left ${tab === t.key ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-200/50'}`}>
-                <Icon size={16} /> {t.label}
-              </button>
-            );
-          })}
-          
-          <hr className="my-2 border-slate-200 hidden md:block" />
-          
-          <button onClick={() => router.push('/seller/dashboard/notifications')}
-            className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg transition-all whitespace-nowrap text-left text-slate-600 hover:bg-slate-200/50`}>
-            <Bell size={16} /> Notifications ↗
-          </button>
+  return (
+    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6 max-w-7xl mx-auto">
+      
+      {/* Header */}
+      <motion.div variants={{hidden: {opacity: 0, y: -20}, show: {opacity: 1, y: 0}}} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Store Identity & Settings</h1>
+          <p className="text-slate-500 mt-2 flex items-center gap-2">
+            <Settings size={16} className="text-slate-400" /> Configure your storefront, shipping rules, and developer access.
+          </p>
         </div>
+        <button onClick={loadData} className="flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition-colors">
+          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Sync Platform
+        </button>
+      </motion.div>
+
+      <div className="flex flex-col lg:flex-row gap-6">
+        
+        {/* Navigation Sidebar */}
+        <motion.div variants={{hidden: {opacity: 0, x: -20}, show: {opacity: 1, x: 0}}} className="lg:w-72 shrink-0">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden p-3 sticky top-6">
+            <div className="space-y-1">
+              {TABS.map(t => {
+                const Icon = t.icon;
+                const isActive = tab === t.key;
+                return (
+                  <button 
+                    key={t.key} 
+                    onClick={() => setTab(t.key)}
+                    className={`
+                      w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-all group
+                      ${isActive ? 'bg-slate-900 text-white shadow-md shadow-slate-900/10' : 'text-slate-600 hover:bg-slate-50'}
+                    `}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-1.5 rounded-lg ${isActive ? 'bg-white/10' : t.bg} transition-colors`}>
+                        <Icon size={18} className={isActive ? 'text-white' : t.color} />
+                      </div>
+                      <span className="font-bold text-sm">{t.label}</span>
+                    </div>
+                    {isActive && <ChevronRight size={16} className="text-white/50" />}
+                  </button>
+                );
+              })}
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-slate-100 space-y-1">
+              <button onClick={() => router.push('/seller/dashboard/notifications')}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-bold text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">
+                <div className="p-1.5 rounded-lg bg-slate-100"><Bell size={18} className="text-slate-500" /></div>
+                Notifications Center
+              </button>
+              <a href="https://seller.hinchmart.com/help" target="_blank" rel="noreferrer"
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-bold text-slate-600 rounded-xl hover:bg-slate-50 transition-colors">
+                <div className="p-1.5 rounded-lg bg-slate-100"><Globe size={18} className="text-slate-500" /></div>
+                Help & Support
+              </a>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Content Area */}
-        <div className="flex-1 p-6 md:p-8 overflow-y-auto">
-          {/* General Tab */}
-          {tab === 'general' && (
-            <form onSubmit={handleSaveSettings} className="max-w-2xl space-y-6">
-              <h2 className="text-xl font-bold text-slate-900 pb-4 border-b border-slate-200 mb-6">General Store Information</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1.5">Store / Business Name</label>
-                  <input value={settings.businessName || ''} onChange={e => setSettings({...settings, businessName: e.target.value})} required className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Support Email</label>
-                    <input type="email" value={settings.email || ''} onChange={e => setSettings({...settings, email: e.target.value})} required className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Support Phone</label>
-                    <input value={settings.phone || ''} onChange={e => setSettings({...settings, phone: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1.5">Store Address</label>
-                  <textarea value={settings.address || ''} onChange={e => setSettings({...settings, address: e.target.value})} rows={3} className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm" />
-                </div>
-              </div>
-              <div className="pt-6">
-                <button type="submit" disabled={saving} className="bg-slate-900 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors flex items-center gap-2">
-                  {saving ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>} Save General Settings
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Shipping Tab */}
-          {tab === 'shipping' && (
-            <form onSubmit={handleSaveSettings} className="max-w-2xl space-y-6">
-              <h2 className="text-xl font-bold text-slate-900 pb-4 border-b border-slate-200 mb-6 flex items-center gap-2"><Truck/> Shipping & Logistics</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1.5">Default Flat Shipping Fee (₹)</label>
-                  <input type="number" step="0.01" value={settings.shippingFee || ''} onChange={e => setSettings({...settings, shippingFee: e.target.value})} className="w-full max-w-sm px-4 py-2 border border-slate-300 rounded-lg text-sm" />
-                  <p className="text-xs text-slate-500 mt-1">Applied to orders unless overridden by product rules.</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1.5">Free Shipping Threshold (₹)</label>
-                  <input type="number" step="0.01" value={settings.freeShippingThreshold || ''} onChange={e => setSettings({...settings, freeShippingThreshold: e.target.value})} className="w-full max-w-sm px-4 py-2 border border-slate-300 rounded-lg text-sm" />
-                  <p className="text-xs text-slate-500 mt-1">Orders above this amount receive free shipping. Leave blank to disable.</p>
-                </div>
-              </div>
-              <div className="pt-6">
-                <button type="submit" disabled={saving} className="bg-slate-900 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors flex items-center gap-2">
-                  <Save size={16}/> Save Shipping Rules
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Payments Tab */}
-          {tab === 'payments' && (
-            <form onSubmit={handleSaveSettings} className="max-w-2xl space-y-6">
-              <h2 className="text-xl font-bold text-slate-900 pb-4 border-b border-slate-200 mb-6 flex items-center gap-2"><CreditCard/> Payments & Billing</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1.5">GST/Tax Identification Number</label>
-                  <input value={settings.gstNumber || ''} onChange={e => setSettings({...settings, gstNumber: e.target.value})} className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm uppercase font-mono" placeholder="22AAAAA0000A1Z5" />
-                </div>
-                <div className="p-4 border border-blue-200 bg-blue-50 rounded-xl">
-                  <label className="block text-sm font-bold text-blue-900 mb-1.5">Razorpay Connected Account ID</label>
-                  <input value={settings.razorpayAccountId || ''} onChange={e => setSettings({...settings, razorpayAccountId: e.target.value})} className="w-full px-4 py-2 border border-blue-300 rounded-lg text-sm font-mono" placeholder="acc_..." />
-                  <p className="text-xs text-blue-700 mt-2">Required for receiving automated payouts from the marketplace.</p>
-                </div>
-              </div>
-              <div className="pt-6">
-                <button type="submit" disabled={saving} className="bg-slate-900 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors flex items-center gap-2">
-                  <Save size={16}/> Save Billing Info
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Security Tab */}
-          {tab === 'security' && (
-            <form onSubmit={handleSaveSettings} className="max-w-2xl space-y-6">
-              <h2 className="text-xl font-bold text-slate-900 pb-4 border-b border-slate-200 mb-6 flex items-center gap-2"><Shield/> Security Settings</h2>
+        <div className="flex-1">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              variants={contentVariants}
+              initial="hidden"
+              animate="show"
+              exit="hidden"
+              className="bg-white rounded-2xl border border-slate-100 shadow-sm min-h-[600px] flex flex-col"
+            >
               
-              <div className="p-5 border border-slate-200 rounded-xl">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-bold text-slate-900">Two-Factor Authentication (2FA)</h3>
-                    <p className="text-sm text-slate-500 mt-1">Require an extra security code when logging in.</p>
+              {/* Tab Header */}
+              <div className="p-6 border-b border-slate-100 flex items-center gap-4 bg-slate-50/50 rounded-t-2xl">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${activeTabConfig.bg}`}>
+                  <ActiveIcon size={24} className={activeTabConfig.color} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-extrabold text-slate-900">{activeTabConfig.label}</h2>
+                  <p className="text-sm text-slate-500 font-medium">Manage preferences and configurations for this section.</p>
+                </div>
+              </div>
+
+              <div className="p-8">
+                {/* General Tab */}
+                {tab === 'general' && (
+                  <form onSubmit={handleSaveSettings} className="max-w-2xl space-y-8">
+                    <div className="space-y-5">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Store / Business Name</label>
+                        <input value={settings.businessName || ''} onChange={e => setSettings({...settings, businessName: e.target.value})} required className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-bold text-slate-900" />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Support Email</label>
+                          <input type="email" value={settings.email || ''} onChange={e => setSettings({...settings, email: e.target.value})} required className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-900" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Support Phone</label>
+                          <input value={settings.phone || ''} onChange={e => setSettings({...settings, phone: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-900" />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Registered Address</label>
+                        <textarea value={settings.address || ''} onChange={e => setSettings({...settings, address: e.target.value})} rows={3} className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-900 resize-none" />
+                      </div>
+                    </div>
+                    
+                    <div className="pt-6 border-t border-slate-100 flex justify-end">
+                      <button type="submit" disabled={saving} className="bg-blue-600 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 hover:-translate-y-0.5 flex items-center justify-center gap-2 min-w-[200px]">
+                        {saving ? <Loader2 size={18} className="animate-spin"/> : <Save size={18}/>} Save Store Profile
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Shipping Tab */}
+                {tab === 'shipping' && (
+                  <form onSubmit={handleSaveSettings} className="max-w-2xl space-y-8">
+                    <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-6 mb-8">
+                      <div className="flex gap-4">
+                        <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-amber-100 flex items-center justify-center shrink-0">
+                          <Truck size={24} className="text-amber-500" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-amber-900 text-lg">Global Shipping Rules</h3>
+                          <p className="text-sm text-amber-700/80 mt-1 leading-relaxed">These rules apply to all products unless overridden at the individual product level. Ensure your rates are competitive.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="relative">
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Default Flat Shipping Fee (₹)</label>
+                        <div className="relative max-w-sm">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">₹</span>
+                          <input type="number" step="0.01" value={settings.shippingFee || ''} onChange={e => setSettings({...settings, shippingFee: e.target.value})} className="w-full pl-8 pr-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all font-bold text-slate-900" />
+                        </div>
+                      </div>
+                      
+                      <div className="relative">
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Free Shipping Threshold (₹)</label>
+                        <div className="relative max-w-sm">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">₹</span>
+                          <input type="number" step="0.01" value={settings.freeShippingThreshold || ''} onChange={e => setSettings({...settings, freeShippingThreshold: e.target.value})} placeholder="e.g. 500" className="w-full pl-8 pr-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all font-bold text-slate-900" />
+                        </div>
+                        <p className="text-xs font-semibold text-slate-500 mt-2 max-w-sm">Orders above this amount receive free shipping. Leave blank to disable this feature.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-8 border-t border-slate-100 flex justify-end">
+                      <button type="submit" disabled={saving} className="bg-amber-500 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 hover:-translate-y-0.5 flex items-center justify-center gap-2 min-w-[200px]">
+                        {saving ? <Loader2 size={18} className="animate-spin"/> : <Save size={18}/>} Update Logistics
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Payments Tab */}
+                {tab === 'payments' && (
+                  <form onSubmit={handleSaveSettings} className="max-w-2xl space-y-8">
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">GST / Tax Identification Number</label>
+                        <input value={settings.gstNumber || ''} onChange={e => setSettings({...settings, gstNumber: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all font-mono font-bold text-slate-900 uppercase" placeholder="22AAAAA0000A1Z5" />
+                        <p className="text-xs font-semibold text-slate-500 mt-2">Required for generating B2B invoices and filing tax returns.</p>
+                      </div>
+                      
+                      <div className="p-6 border-2 border-emerald-100 bg-emerald-50/30 rounded-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                        <div className="relative z-10">
+                          <label className="block text-xs font-bold text-emerald-900 uppercase tracking-wider mb-2 flex items-center gap-2">
+                            <CreditCard size={14}/> Razorpay Connected Account ID
+                          </label>
+                          <input value={settings.razorpayAccountId || ''} onChange={e => setSettings({...settings, razorpayAccountId: e.target.value})} className="w-full px-4 py-3 border border-emerald-200 rounded-xl bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all font-mono font-bold text-emerald-900" placeholder="acc_..." />
+                          <div className="flex items-start gap-2 mt-3 p-3 bg-emerald-100/50 rounded-lg">
+                            <Shield size={16} className="text-emerald-700 shrink-0 mt-0.5" />
+                            <p className="text-xs font-medium text-emerald-800 leading-relaxed">This ID links your bank account to our marketplace. It is strictly required to receive automated, daily payouts from successful orders.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-6 border-t border-slate-100 flex justify-end">
+                      <button type="submit" disabled={saving} className="bg-emerald-600 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 hover:-translate-y-0.5 flex items-center justify-center gap-2 min-w-[200px]">
+                        {saving ? <Loader2 size={18} className="animate-spin"/> : <Save size={18}/>} Save Billing Info
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Security Tab */}
+                {tab === 'security' && (
+                  <form onSubmit={handleSaveSettings} className="max-w-2xl space-y-8">
+                    
+                    <div className="p-6 border border-slate-200 rounded-2xl bg-white shadow-sm flex items-start gap-5">
+                      <div className="w-12 h-12 bg-red-50 text-red-500 rounded-xl flex items-center justify-center shrink-0">
+                        <Lock size={24} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-bold text-slate-900 text-lg">Two-Factor Authentication (2FA)</h3>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" className="sr-only peer" checked={settings.twoFactorEnabled || false} onChange={e => setSettings({...settings, twoFactorEnabled: e.target.checked})} />
+                            <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-red-500"></div>
+                          </label>
+                        </div>
+                        <p className="text-sm font-medium text-slate-600 leading-relaxed">Protect your seller account with an extra layer of security. When enabled, you'll need to enter a time-sensitive code along with your password when logging in.</p>
+                      </div>
+                    </div>
+
+                    <div className="pt-6 border-t border-slate-100 flex justify-end">
+                      <button type="submit" disabled={saving} className="bg-red-600 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 hover:-translate-y-0.5 flex items-center justify-center gap-2 min-w-[200px]">
+                        {saving ? <Loader2 size={18} className="animate-spin"/> : <Shield size={18}/>} Update Security Policy
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* API Keys */}
+                {tab === 'apikeys' && (
+                  <div className="max-w-4xl space-y-8">
+                    <div className="bg-purple-50 p-6 rounded-2xl border border-purple-100 text-purple-900 mb-8 flex gap-4 items-start">
+                      <Key size={24} className="text-purple-600 shrink-0 mt-1" />
+                      <div>
+                        <h3 className="font-bold text-lg mb-1">Developer API Access</h3>
+                        <p className="text-sm font-medium text-purple-800/80 leading-relaxed">Generate secret keys to securely authenticate external integrations, ERP systems, or custom inventory management software with your HinchMart seller account.</p>
+                      </div>
+                    </div>
+
+                    <AnimatePresence>
+                      {revealedKey && (
+                        <motion.div initial={{ opacity: 0, height: 0, y: -20 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                          <div className="bg-gradient-to-r from-purple-900 to-slate-900 border border-purple-800 rounded-2xl p-6 mb-8 text-white relative shadow-xl">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+                            <h3 className="font-bold text-lg flex items-center gap-2 relative z-10">
+                              <CheckCircle2 className="text-emerald-400"/> New Key Generated: {revealedKey.name}
+                            </h3>
+                            <p className="text-sm text-purple-200 mt-2 mb-6 font-medium relative z-10 max-w-xl">This is your secret key. <strong className="text-white">Copy it now and store it securely.</strong> You will not be able to see it again after closing this tab.</p>
+                            
+                            <div className="flex flex-col sm:flex-row gap-3 relative z-10">
+                              <div className="flex-1 relative">
+                                <input readOnly value={revealedKey.key} className="w-full px-4 py-3 bg-black/40 border border-purple-500/50 rounded-xl text-sm font-mono text-purple-300 focus:outline-none" />
+                              </div>
+                              <button onClick={() => { navigator.clipboard.writeText(revealedKey.key); alert('Copied to clipboard'); }} className="px-6 py-3 bg-purple-500 text-white rounded-xl hover:bg-purple-600 font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-lg shadow-purple-900/50 shrink-0">
+                                <Copy size={16}/> Copy to Clipboard
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <form onSubmit={handleCreateApiKey} className="flex flex-col sm:flex-row gap-4 items-end p-6 border border-slate-200 rounded-2xl bg-white shadow-sm">
+                      <div className="flex-1 w-full">
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">New API Key Name</label>
+                        <input value={newApiKeyName} onChange={e => setNewApiKeyName(e.target.value)} required placeholder="e.g. ERP Integration Prod" className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all font-bold text-slate-900" />
+                      </div>
+                      <button type="submit" disabled={loading} className="w-full sm:w-auto bg-slate-900 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2">
+                        <Plus size={18}/> Generate Key
+                      </button>
+                    </form>
+
+                    <div className="border border-slate-200 rounded-2xl overflow-hidden mt-8 shadow-sm">
+                      <table className="w-full text-left">
+                        <thead className="bg-slate-50/80 border-b border-slate-100">
+                          <tr>
+                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Key Name</th>
+                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Secret Prefix</th>
+                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Created Date</th>
+                            <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {settings.apiKeys?.map((k: any) => (
+                            <tr key={k.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-6 py-4 font-bold text-slate-900">{k.name}</td>
+                              <td className="px-6 py-4">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 border border-slate-200 text-slate-700 font-mono text-xs rounded-lg font-bold">
+                                  {k.keyPrefix}••••••••
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-sm font-medium text-slate-500">
+                                {new Date(k.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <button onClick={() => handleDeleteApiKey(k.id)} className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-colors">
+                                  <Trash2 size={16}/>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                          {(!settings.apiKeys || settings.apiKeys.length === 0) && (
+                            <tr>
+                              <td colSpan={4} className="text-center py-12">
+                                <Key size={32} className="mx-auto text-slate-300 mb-3" />
+                                <p className="text-slate-500 font-medium text-sm">No API keys found. Generate one to connect external apps.</p>
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" checked={settings.twoFactorEnabled || false} onChange={e => setSettings({...settings, twoFactorEnabled: e.target.checked})} />
-                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-                  </label>
-                </div>
-              </div>
+                )}
 
-              <div className="pt-6">
-                <button type="submit" disabled={saving} className="bg-slate-900 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors flex items-center gap-2">
-                  <Save size={16}/> Update Security Policy
-                </button>
-              </div>
-            </form>
-          )}
+                {/* Webhooks */}
+                {tab === 'webhooks' && (
+                  <div className="max-w-4xl space-y-8">
+                    <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 text-indigo-900 mb-8 flex gap-4 items-start">
+                      <Webhook size={24} className="text-indigo-600 shrink-0 mt-1" />
+                      <div>
+                        <h3 className="font-bold text-lg mb-1">Event Webhooks</h3>
+                        <p className="text-sm font-medium text-indigo-800/80 leading-relaxed">Listen to real-time events on your store. When an event triggers, we will send an HTTP POST request with the JSON payload to the URL you specify.</p>
+                      </div>
+                    </div>
+                    
+                    <form onSubmit={handleCreateWebhook} className="grid grid-cols-1 md:grid-cols-12 gap-5 items-end p-6 border border-slate-200 rounded-2xl bg-white shadow-sm">
+                      <div className="md:col-span-4">
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Event Subscription</label>
+                        <select value={newWebhookEvent} onChange={e => setNewWebhookEvent(e.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-bold text-slate-700 appearance-none">
+                          <option value="order.created">order.created</option>
+                          <option value="order.updated">order.updated</option>
+                          <option value="product.stock_low">product.stock_low</option>
+                        </select>
+                      </div>
+                      <div className="md:col-span-6">
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Target Payload URL</label>
+                        <input type="url" value={newWebhookUrl} onChange={e => setNewWebhookUrl(e.target.value)} required placeholder="https://api.yoursite.com/webhook" className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-mono text-sm" />
+                      </div>
+                      <div className="md:col-span-2">
+                        <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white px-4 py-3 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2">
+                          <Plus size={18}/> Add
+                        </button>
+                      </div>
+                    </form>
 
-          {/* API Keys */}
-          {tab === 'apikeys' && (
-            <div className="max-w-3xl space-y-6">
-              <h2 className="text-xl font-bold text-slate-900 pb-4 border-b border-slate-200 mb-6 flex items-center gap-2"><Key/> Developer API Keys</h2>
-              
-              {revealedKey && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 mb-6">
-                  <h3 className="text-emerald-800 font-bold mb-2">New Key Generated: {revealedKey.name}</h3>
-                  <p className="text-sm text-emerald-700 mb-4">Please copy this secret key now. You will not be able to see it again.</p>
-                  <div className="flex gap-2">
-                    <input readOnly value={revealedKey.key} className="flex-1 px-4 py-2 bg-white border border-emerald-300 rounded-lg text-sm font-mono text-emerald-900" />
-                    <button onClick={() => navigator.clipboard.writeText(revealedKey.key)} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-bold text-sm flex items-center gap-2"><Copy size={16}/> Copy</button>
+                    <div className="border border-slate-200 rounded-2xl overflow-hidden mt-8 shadow-sm">
+                      <table className="w-full text-left">
+                        <thead className="bg-slate-50/80 border-b border-slate-100">
+                          <tr>
+                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Subscribed Event</th>
+                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Endpoint URL</th>
+                            <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {settings.webhooks?.map((w: any) => (
+                            <tr key={w.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-6 py-4">
+                                <span className="inline-flex items-center px-3 py-1 bg-indigo-50 border border-indigo-100 text-indigo-700 font-mono text-xs rounded-lg font-bold">
+                                  {w.events[0]}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="font-mono text-sm text-slate-600 truncate max-w-sm block">
+                                  {w.url}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <button onClick={() => handleDeleteWebhook(w.id)} className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-colors">
+                                  <Trash2 size={16}/>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                          {(!settings.webhooks || settings.webhooks.length === 0) && (
+                            <tr>
+                              <td colSpan={3} className="text-center py-12">
+                                <Webhook size={32} className="mx-auto text-slate-300 mb-3" />
+                                <p className="text-slate-500 font-medium text-sm">No webhooks registered.</p>
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <form onSubmit={handleCreateApiKey} className="flex gap-3 items-end p-4 border border-slate-200 rounded-xl bg-slate-50">
-                <div className="flex-1">
-                  <label className="block text-sm font-bold text-slate-700 mb-1.5">New API Key Name</label>
-                  <input value={newApiKeyName} onChange={e => setNewApiKeyName(e.target.value)} required placeholder="e.g. ERP Integration" className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm" />
-                </div>
-                <button type="submit" disabled={loading} className="bg-slate-900 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors h-[38px] flex items-center justify-center gap-2">
-                  <Plus size={16}/> Generate Key
-                </button>
-              </form>
+                {/* KYC Tab */}
+                {tab === 'kyc' && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl">
+                    <div className="bg-teal-50 p-6 rounded-2xl border border-teal-100 text-teal-900 mb-8 flex gap-4 items-start">
+                      <Shield size={24} className="text-teal-600 shrink-0 mt-1" />
+                      <div>
+                        <h3 className="font-bold text-lg mb-1">Identity & Business Verification</h3>
+                        <p className="text-sm font-medium text-teal-800/80 leading-relaxed">Complete your KYC to unlock full marketplace features, including unlimited payouts and featured seller status.</p>
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-2">
+                       <KycStatus />
+                    </div>
+                  </motion.div>
+                )}
 
-              <div className="border border-slate-200 rounded-xl overflow-hidden mt-6">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold text-slate-600">Name</th>
-                      <th className="px-4 py-3 font-semibold text-slate-600">Prefix</th>
-                      <th className="px-4 py-3 font-semibold text-slate-600">Created</th>
-                      <th className="px-4 py-3 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {settings.apiKeys?.map((k: any) => (
-                      <tr key={k.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 font-semibold text-slate-900">{k.name}</td>
-                        <td className="px-4 py-3 font-mono text-xs text-slate-500 bg-slate-100 rounded px-2">{k.keyPrefix}</td>
-                        <td className="px-4 py-3 text-slate-500">{new Date(k.createdAt).toLocaleDateString()}</td>
-                        <td className="px-4 py-3 text-right">
-                          <button onClick={() => handleDeleteApiKey(k.id)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={16}/></button>
-                        </td>
-                      </tr>
-                    ))}
-                    {(!settings.apiKeys || settings.apiKeys.length === 0) && <tr><td colSpan={4} className="text-center py-6 text-slate-500">No API keys found.</td></tr>}
-                  </tbody>
-                </table>
               </div>
-            </div>
-          )}
-
-          {/* Webhooks */}
-          {tab === 'webhooks' && (
-            <div className="max-w-3xl space-y-6">
-              <h2 className="text-xl font-bold text-slate-900 pb-4 border-b border-slate-200 mb-6 flex items-center gap-2"><Webhook/> Webhooks</h2>
-              
-              <form onSubmit={handleCreateWebhook} className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end p-4 border border-slate-200 rounded-xl bg-slate-50">
-                <div className="sm:col-span-1">
-                  <label className="block text-sm font-bold text-slate-700 mb-1.5">Event Type</label>
-                  <select value={newWebhookEvent} onChange={e => setNewWebhookEvent(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                    <option value="order.created">order.created</option>
-                    <option value="order.updated">order.updated</option>
-                    <option value="product.stock_low">product.stock_low</option>
-                  </select>
-                </div>
-                <div className="sm:col-span-2 flex gap-3">
-                  <div className="flex-1">
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Endpoint URL</label>
-                    <input type="url" value={newWebhookUrl} onChange={e => setNewWebhookUrl(e.target.value)} required placeholder="https://api.yoursite.com/webhook" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                  </div>
-                  <button type="submit" disabled={loading} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors h-[38px] mt-auto flex items-center justify-center">
-                    Add
-                  </button>
-                </div>
-              </form>
-
-              <div className="border border-slate-200 rounded-xl overflow-hidden mt-6">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold text-slate-600">Event</th>
-                      <th className="px-4 py-3 font-semibold text-slate-600">Endpoint URL</th>
-                      <th className="px-4 py-3 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {settings.webhooks?.map((w: any) => (
-                      <tr key={w.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 font-mono text-xs text-indigo-700 bg-indigo-50 rounded px-2">{w.events[0]}</td>
-                        <td className="px-4 py-3 text-slate-600 truncate max-wxs">{w.url}</td>
-                        <td className="px-4 py-3 text-right">
-                          <button onClick={() => handleDeleteWebhook(w.id)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={16}/></button>
-                        </td>
-                      </tr>
-                    ))}
-                    {(!settings.webhooks || settings.webhooks.length === 0) && <tr><td colSpan={3} className="text-center py-6 text-slate-500">No webhooks registered.</td></tr>}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

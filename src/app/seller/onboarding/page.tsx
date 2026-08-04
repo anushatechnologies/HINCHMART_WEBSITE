@@ -31,7 +31,9 @@ export default function SellerOnboarding() {
   const [currentStep, setCurrentStep] = useState(1);
   const [vendorId, setVendorId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [verifying, setVerifying] = useState('');
   const [error, setError] = useState('');
+  const [verifications, setVerifications] = useState({ gst: false, pan: false, bank: false });
 
   const [formData, setFormData] = useState({
     companyName: '',
@@ -41,6 +43,7 @@ export default function SellerOnboarding() {
     panNumber: '',
     aadhaarNumber: '',
     cinNumber: '',
+    msmeNumber: '',
     bankName: '',
     bankAccountNumber: '',
     ifscCode: '',
@@ -49,6 +52,12 @@ export default function SellerOnboarding() {
     targetAudiences: [] as string[],
     serviceCities: [] as string[],
     primaryCategories: [] as string[],
+    documentExpiries: {
+      gstExpiry: '',
+      panExpiry: '',
+      tradeLicenseExpiry: '',
+      fssaiExpiry: ''
+    },
   });
 
   useEffect(() => {
@@ -70,7 +79,17 @@ export default function SellerOnboarding() {
       targetAudiences: parsed.targetAudiences || [],
       serviceCities: parsed.serviceCities || [],
       primaryCategories: parsed.primaryCategories || [],
+      msmeNumber: parsed.msmeNumber || '',
+      cinNumber: parsed.cinNumber || '',
+      aadhaarNumber: parsed.aadhaarNumber || '',
+      documentExpiries: parsed.documentExpiries || { gstExpiry: '', panExpiry: '', tradeLicenseExpiry: '', fssaiExpiry: '' },
     }));
+    
+    setVerifications({
+      gst: parsed.gstVerified || false,
+      pan: parsed.panVerified || false,
+      bank: parsed.bankPennyDropStatus === 'VERIFIED',
+    });
     // Resume from saved step
     if (parsed.onboardingStep && parsed.onboardingStep > 1) {
       setCurrentStep(parsed.onboardingStep);
@@ -79,6 +98,16 @@ export default function SellerOnboarding() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleDocumentExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      documentExpiries: {
+        ...formData.documentExpiries,
+        [e.target.name]: e.target.value
+      }
+    });
   };
 
   const handleArrayToggle = (field: 'targetAudiences' | 'serviceCities' | 'primaryCategories', value: string) => {
@@ -128,9 +157,57 @@ export default function SellerOnboarding() {
     if (currentStep > 1) setCurrentStep(s => s - 1);
   };
 
+  const handleVerify = async (type: 'gst' | 'pan' | 'bank') => {
+    if (!vendorId) return;
+    setVerifying(type);
+    setError('');
+    
+    try {
+      const endpoints = {
+        gst: `/kyc/verify-gst`,
+        pan: `/kyc/verify-pan`,
+        bank: `/kyc/penny-drop`
+      };
+      
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/vendors/${vendorId}${endpoints[type]}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setVerifications(prev => ({ ...prev, [type]: true }));
+        // Update local cache
+        const current = JSON.parse(localStorage.getItem('seller_info') || '{}');
+        localStorage.setItem('seller_info', JSON.stringify({ ...current, ...data.data }));
+      } else {
+        setError(data.message || `Failed to verify ${type.toUpperCase()}`);
+      }
+    } catch {
+      setError('An error occurred during verification.');
+    } finally {
+      setVerifying('');
+    }
+  };
+
   const handleFinish = async () => {
+    setSaving(true);
     await saveProgress(8);
-    router.push('/seller/dashboard');
+    // Final KYC Submission
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/vendors/${vendorId}/kyc/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        router.push('/seller/dashboard');
+      }
+    } catch (e) {
+      setError('Failed to submit KYC. Please try again.');
+    }
+    setSaving(false);
   };
 
   const progress = ((currentStep - 1) / (STEPS.length - 1)) * 100;
@@ -251,6 +328,12 @@ export default function SellerOnboarding() {
                       className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                       placeholder="For Private/Public Ltd companies" />
                   </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">MSME / Udyam Number (Optional)</label>
+                    <input name="msmeNumber" value={formData.msmeNumber} onChange={handleChange}
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                      placeholder="UDYAM-XX-00-0000000" />
+                  </div>
                 </div>
               </div>
             )}
@@ -314,9 +397,16 @@ export default function SellerOnboarding() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">GSTIN *</label>
-                  <input name="gstin" value={formData.gstin} onChange={handleChange}
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 font-mono tracking-wider"
-                    placeholder="22AAAAA0000A1Z5" maxLength={15} />
+                  <div className="flex gap-2">
+                    <input name="gstin" value={formData.gstin} onChange={handleChange} disabled={verifications.gst}
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 font-mono tracking-wider disabled:bg-slate-100"
+                      placeholder="22AAAAA0000A1Z5" maxLength={15} />
+                    <button type="button" onClick={() => handleVerify('gst')} disabled={formData.gstin.length !== 15 || verifying === 'gst' || verifications.gst}
+                      className="px-4 py-2 bg-slate-900 text-white rounded-lg font-bold text-sm shrink-0 disabled:opacity-50 flex items-center gap-2">
+                      {verifying === 'gst' ? <Loader2 size={16} className="animate-spin" /> : verifications.gst ? <CheckCircle size={16} className="text-emerald-400" /> : null}
+                      {verifications.gst ? 'Verified' : 'Verify'}
+                    </button>
+                  </div>
                   <p className="text-xs text-slate-500 mt-1">15-character alphanumeric GST Identification Number</p>
                 </div>
                 <div>
@@ -337,15 +427,29 @@ export default function SellerOnboarding() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">PAN Number *</label>
-                  <input name="panNumber" value={formData.panNumber} onChange={handleChange}
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 font-mono tracking-widest uppercase"
-                    placeholder="ABCDE1234F" maxLength={10} />
+                  <div className="flex gap-2">
+                    <input name="panNumber" value={formData.panNumber} onChange={handleChange} disabled={verifications.pan}
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 font-mono tracking-widest uppercase disabled:bg-slate-100"
+                      placeholder="ABCDE1234F" maxLength={10} />
+                    <button type="button" onClick={() => handleVerify('pan')} disabled={formData.panNumber.length !== 10 || verifying === 'pan' || verifications.pan}
+                      className="px-4 py-2 bg-slate-900 text-white rounded-lg font-bold text-sm shrink-0 disabled:opacity-50 flex items-center gap-2">
+                      {verifying === 'pan' ? <Loader2 size={16} className="animate-spin" /> : verifications.pan ? <CheckCircle size={16} className="text-emerald-400" /> : null}
+                      {verifications.pan ? 'Verified' : 'Verify'}
+                    </button>
+                  </div>
                   <p className="text-xs text-slate-500 mt-1">10-character alphanumeric PAN</p>
                 </div>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <p className="text-sm text-blue-700">
                     <strong>Why we need PAN:</strong> As per Indian tax laws, TDS @ 1% is deducted on all payments above ₹30,000. Your PAN is required to credit this TDS to your account.
                   </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Aadhaar Number (Optional)</label>
+                  <input name="aadhaarNumber" value={formData.aadhaarNumber} onChange={handleChange}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 font-mono tracking-widest"
+                    placeholder="1234 5678 9012" maxLength={14} />
+                  <p className="text-xs text-slate-500 mt-1">Used for secondary KYC verification if PAN is unavailable.</p>
                 </div>
               </div>
             )}
@@ -372,10 +476,15 @@ export default function SellerOnboarding() {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">IFSC Code *</label>
-                    <input name="ifscCode" value={formData.ifscCode} onChange={handleChange}
-                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 font-mono tracking-widest uppercase"
+                    <input name="ifscCode" value={formData.ifscCode} onChange={handleChange} disabled={verifications.bank}
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 font-mono tracking-widest uppercase disabled:bg-slate-100"
                       placeholder="SBIN0001234" maxLength={11} />
                   </div>
+                  <button type="button" onClick={() => handleVerify('bank')} disabled={!formData.bankAccountNumber || !formData.ifscCode || verifying === 'bank' || verifications.bank}
+                    className="w-full px-4 py-3 mt-2 bg-emerald-600 text-white rounded-lg font-bold flex items-center justify-center gap-2 disabled:opacity-50">
+                    {verifying === 'bank' ? <Loader2 size={18} className="animate-spin" /> : verifications.bank ? <CheckCircle size={18} /> : null}
+                    {verifications.bank ? 'Bank Account Verified Successfully' : 'Verify Bank Account (₹1 Penny Drop)'}
+                  </button>
                 </div>
               </div>
             )}
@@ -428,6 +537,29 @@ export default function SellerOnboarding() {
                       />
                     </div>
                   ))}
+                </div>
+                
+                <div className="mt-8 border-t border-slate-200 pt-6">
+                  <h3 className="text-lg font-bold text-slate-900 mb-4">Document Expiry Dates</h3>
+                  <p className="text-sm text-slate-500 mb-4">Set alerts for when your licenses expire.</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Trade License Expiry (Optional)</label>
+                      <input type="date" name="tradeLicenseExpiry" value={formData.documentExpiries.tradeLicenseExpiry} onChange={handleDocumentExpiryChange}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">FSSAI Expiry (Optional)</label>
+                      <input type="date" name="fssaiExpiry" value={formData.documentExpiries.fssaiExpiry} onChange={handleDocumentExpiryChange}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">GST Expiry (Optional)</label>
+                      <input type="date" name="gstExpiry" value={formData.documentExpiries.gstExpiry} onChange={handleDocumentExpiryChange}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

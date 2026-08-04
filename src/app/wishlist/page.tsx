@@ -1,6 +1,13 @@
-"use client";
-import React, { useEffect, useState } from 'react';
+'use client';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Heart, ShoppingCart, Trash2, ArrowRight, Tag, Star, Package } from 'lucide-react';
+
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+const itemVariants = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } } };
 
 export default function WishlistPage() {
   const [wishlist, setWishlist] = useState<any[]>([]);
@@ -20,7 +27,7 @@ export default function WishlistPage() {
         return;
       }
       
-      const res = await fetch('http://localhost:5000/api/wishlist', {
+      const res = await fetch(`${API}/api/wishlist`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const json = await res.json();
@@ -44,63 +51,146 @@ export default function WishlistPage() {
         return;
       }
 
-      await fetch(`http://localhost:5000/api/wishlist/${productId}`, {
+      await fetch(`${API}/api/wishlist/${productId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      fetchWishlist();
+      
+      // Optimistic UI update
+      setWishlist(prev => prev.filter(item => item.productId !== productId));
       window.dispatchEvent(new Event('wishlist-updated'));
     } catch (error) {
       console.error(error);
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Loading wishlist...</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] bg-slate-50">
+        <div className="w-12 h-12 border-4 border-slate-200 border-t-rose-500 rounded-full animate-spin mb-4"></div>
+        <p className="text-slate-500 font-bold tracking-widest uppercase text-sm">Loading Wishlist</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 className="text-3xl font-extrabold text-slate-900 mb-8">My Saved Lists / Wishlist</h1>
-      
-      {wishlist.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-slate-100">
-          <p className="text-slate-500 mb-4">You haven't saved any items yet. Save items to quickly reorder later.</p>
-          <Link href="/" className="text-blue-600 font-medium hover:underline">Continue Shopping</Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {wishlist.map((item) => (
-            <div key={item.productId} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col group hover:shadow-lg transition-all">
-              <Link href={`/products/${item.product.slug}`} className="relative h-48 w-full bg-slate-100 block">
-                {item.product.images?.[0] ? (
-                  <img src={item.product.images[0].url.startsWith('http') ? item.product.images[0].url : `http://localhost:5000${item.product.images[0].url}`} alt={item.product.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-300">No Image</div>
-                )}
-              </Link>
-              <div className="p-4 flex-1 flex flex-col">
-                <h3 className="font-bold text-slate-900 line-clamp-2 mb-1 group-hover:text-blue-600 transition-colors">
-                  <Link href={`/products/${item.product.slug}`}>{item.product.name}</Link>
-                </h3>
-                <p className="text-sm text-slate-500 mb-2">{item.product.brand}</p>
-                <div className="mt-auto flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-lg font-extrabold text-slate-900">₹{item.product.basePrice}</p>
-                    <button onClick={() => removeFromWishlist(item.productId)} className="text-slate-400 hover:text-red-500 text-sm font-medium transition">Remove</button>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => removeFromWishlist(item.productId)} className="w-full border border-slate-300 hover:border-red-400 hover:bg-red-50 text-slate-700 hover:text-red-600 font-bold py-2.5 rounded-xl transition-colors uppercase tracking-widest text-[10px]">
-                      Remove
-                    </button>
-                    <Link href={`/products/${item.product.slug}`} className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors uppercase tracking-widest text-[10px] shadow-sm">
-                      View / Buy
-                    </Link>
-                  </div>
-                </div>
-              </div>
+    <div className="min-h-screen bg-slate-50 pt-8 pb-20">
+      <motion.div variants={containerVariants} initial="hidden" animate="show" className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-2 tracking-tight flex items-center gap-3">
+              My Saved Items <span className="bg-rose-100 text-rose-600 text-sm font-black px-3 py-1 rounded-full">{wishlist.length}</span>
+            </h1>
+            <p className="text-slate-500 font-medium">Keep track of the products you love and want to buy later.</p>
+          </div>
+        </motion.div>
+        
+        {wishlist.length === 0 ? (
+          <motion.div variants={itemVariants} className="text-center py-24 bg-white rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center justify-center relative overflow-hidden">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-rose-500/5 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 border border-slate-100 relative z-10">
+              <Heart size={40} className="text-slate-300" />
             </div>
-          ))}
-        </div>
-      )}
+            <h3 className="text-2xl font-black text-slate-900 mb-2 tracking-tight relative z-10">Your Wishlist is Empty</h3>
+            <p className="text-slate-500 font-medium mb-8 max-w-sm relative z-10">You haven't saved any items yet. Browse our catalog and hit the heart icon to save items here.</p>
+            <Link href="/" className="bg-slate-900 text-white font-bold px-8 py-4 rounded-xl hover:bg-slate-800 hover:-translate-y-0.5 transition-all shadow-lg shadow-slate-900/20 flex items-center gap-2 relative z-10">
+              Discover Products <ArrowRight size={18} />
+            </Link>
+          </motion.div>
+        ) : (
+          <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 xl:gap-8">
+            <AnimatePresence>
+              {wishlist.map((item) => {
+                const product = item.product || {};
+                const imageUrl = product.images?.[0]?.url 
+                  ? (product.images[0].url.startsWith('http') ? product.images[0].url : `${API}${product.images[0].url}`)
+                  : null;
+                  
+                return (
+                  <motion.div 
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                    key={item.productId} 
+                    className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col group hover:shadow-xl transition-all hover:-translate-y-1 duration-300"
+                  >
+                    <div className="relative h-64 w-full bg-slate-50 block overflow-hidden">
+                      <Link href={`/products/${product.slug}`} className="absolute inset-0 z-10"></Link>
+                      
+                      {/* Image */}
+                      {imageUrl ? (
+                        <img src={imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
+                          <Package size={40} className="mb-2 opacity-50" />
+                          <span className="text-xs font-bold uppercase tracking-widest">No Image</span>
+                        </div>
+                      )}
+
+                      {/* Overlays */}
+                      <div className="absolute top-4 left-4 z-20">
+                        {product.discount > 0 && (
+                          <div className="bg-red-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-md flex items-center gap-1">
+                            <Tag size={10} /> {product.discount}% OFF
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="absolute top-4 right-4 z-20">
+                        <button 
+                          onClick={() => removeFromWishlist(item.productId)} 
+                          className="w-10 h-10 rounded-full bg-white/90 backdrop-blur text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-sm"
+                          title="Remove from Wishlist"
+                        >
+                          <Heart size={20} className="fill-current" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="p-6 flex-1 flex flex-col relative z-20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-md">
+                          {product.brand || 'Premium'}
+                        </span>
+                        <div className="flex items-center gap-1 text-amber-500 text-[10px] font-bold">
+                          <Star size={12} className="fill-current" /> 4.8
+                        </div>
+                      </div>
+                      
+                      <h3 className="font-black text-slate-900 text-lg leading-tight line-clamp-2 mb-4 group-hover:text-blue-600 transition-colors tracking-tight">
+                        <Link href={`/products/${product.slug}`}>{product.name || 'Unknown Product'}</Link>
+                      </h3>
+                      
+                      <div className="mt-auto pt-4 border-t border-slate-100 flex flex-col gap-4">
+                        <div className="flex items-end justify-between">
+                          <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Price</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-2xl font-black text-slate-900 tracking-tight">₹{Number(product.basePrice || 0).toLocaleString('en-IN')}</p>
+                              {product.mrp && product.mrp > product.basePrice && (
+                                <p className="text-sm font-bold text-slate-400 line-through">₹{Number(product.mrp).toLocaleString('en-IN')}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <Link 
+                            href={`/products/${product.slug}`} 
+                            className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-slate-900/10 active:scale-95"
+                          >
+                            <ShoppingCart size={16} /> View Details
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </motion.div>
     </div>
   );
 }

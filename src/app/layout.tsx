@@ -12,6 +12,7 @@ import CartDrawer from '../components/layout/CartDrawer';
 import WishlistBadge from '../components/layout/WishlistBadge';
 import Chatbot from '../components/Chatbot';
 import ToastProvider from '../components/ToastProvider';
+import ConditionalUI from '../components/layout/ConditionalUI';
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 
@@ -30,8 +31,9 @@ export default async function RootLayout({
     <html lang="en" className={`${inter.variable} h-full antialiased scroll-smooth`}>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
 
-        {/* ── Top Utility Bar ── */}
-        <div className="bg-[#1a1a2e] text-white text-xs py-2 hidden md:block">
+        <ConditionalUI>
+          {/* ── Top Utility Bar ── */}
+          <div className="bg-[#1a1a2e] text-white text-xs py-2 hidden md:block">
           <div className="max-w-[1400px] mx-auto px-4 flex justify-between items-center">
             <div className="flex items-center gap-1">
               <MapPin size={11} className="text-orange-400" />
@@ -136,12 +138,14 @@ export default async function RootLayout({
             </div>
           </nav>
         </header>
+        </ConditionalUI>
 
         {/* Main Content */}
         <main className="flex-1 flex flex-col">
           {children}
         </main>
 
+        <ConditionalUI>
         {/* Footer */}
         <footer className="bg-[#1a1a2e] text-slate-300">
           <div className="max-w-[1400px] mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
@@ -198,9 +202,9 @@ export default async function RootLayout({
             <div>
               <h3 className="text-white font-bold mb-4 text-sm uppercase tracking-wider">Help & Policies</h3>
               <ul className="space-y-2.5 text-sm">
-                {['Help Center', 'Track Order', 'Return Policy', 'Privacy Policy', 'Terms of Use'].map((label) => (
+                {[['Help Center', '/help-center'], ['Track Order', '/track-order'], ['Return Policy', '/returns'], ['Privacy Policy', '/privacy'], ['Terms of Use', '/terms']].map(([label, href]) => (
                   <li key={label}>
-                    <Link href="#" className="hover:text-orange-400 transition-colors">{label}</Link>
+                    <Link href={href} className="hover:text-orange-400 transition-colors">{label}</Link>
                   </li>
                 ))}
               </ul>
@@ -211,8 +215,8 @@ export default async function RootLayout({
             <div className="max-w-[1400px] mx-auto px-4 py-4 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500">
               <p>© {new Date().getFullYear()} HINCHMART Technologies Pvt. Ltd. All rights reserved.</p>
               <div className="flex gap-6 mt-3 md:mt-0">
-                {['Terms of Use', 'Privacy Policy', 'Return Policy', 'Sitemap'].map((label) => (
-                  <Link key={label} href="#" className="hover:text-white transition-colors">{label}</Link>
+                {[['Terms of Use', '/terms'], ['Privacy Policy', '/privacy'], ['Return Policy', '/returns'], ['Sitemap', '/sitemap.xml']].map(([label, href]) => (
+                  <Link key={label} href={href} className="hover:text-white transition-colors">{label}</Link>
                 ))}
               </div>
             </div>
@@ -221,6 +225,7 @@ export default async function RootLayout({
 
         <Chatbot />
         <CartDrawer />
+        </ConditionalUI>
         <ToastProvider />
       </body>
     </html>

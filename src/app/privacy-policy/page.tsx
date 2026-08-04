@@ -1,5 +1,5 @@
-import DynamicPage from '@/components/layout/DynamicPage';
+import PrivacyPage from '@/app/privacy/page';
 
 export default function PrivacyPolicyPage() {
-  return <DynamicPage slug="privacy-policy" title="Privacy Policy" />;
+  return <PrivacyPage />;
 }
