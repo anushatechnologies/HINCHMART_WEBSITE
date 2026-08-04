@@ -19,9 +19,11 @@ import {
   Boxes,
   Wallet,
   BarChart3,
-  AlertTriangle
+  AlertTriangle,
+  Lock
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import WelcomeModal from '@/components/seller/WelcomeModal';
 
 export default function SellerDashboardLayout({
   children,
@@ -32,7 +34,9 @@ export default function SellerDashboardLayout({
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sellerName, setSellerName] = useState('Seller');
-  const [sellerStatus, setSellerStatus] = useState('PENDING');
+  const [sellerStatus, setSellerStatus] = useState('REGISTERED');
+  const [onboardingProgress, setOnboardingProgress] = useState(10);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('seller_token');
@@ -44,15 +48,15 @@ export default function SellerDashboardLayout({
     if (info) {
       try {
         const parsed = JSON.parse(info);
-        
-        // Enforce Onboarding flow
-        if (parsed.onboardingStep && parsed.onboardingStep < 9) {
-          router.push('/seller/onboarding');
-          return;
-        }
-
         setSellerName(parsed.companyName || parsed.ownerName || 'Seller');
-        setSellerStatus(parsed.status || 'PENDING');
+        setSellerStatus(parsed.status || 'REGISTERED');
+        setOnboardingProgress(parsed.onboardingProgress || 10);
+
+        // Show welcome modal if newly registered
+        if (parsed.status === 'REGISTERED' && !sessionStorage.getItem('welcome_shown')) {
+          setShowWelcomeModal(true);
+          sessionStorage.setItem('welcome_shown', 'true');
+        }
       } catch (e) {}
     }
   }, [router]);
@@ -65,16 +69,16 @@ export default function SellerDashboardLayout({
   };
 
   const navItems = [
-    { name: 'Overview', href: '/seller/dashboard', icon: LayoutDashboard },
-    { name: 'Sales Dashboard', href: '/seller/dashboard/sales', icon: TrendingUp },
-    { name: 'Orders Dashboard', href: '/seller/dashboard/orders', icon: ShoppingCart },
-    { name: 'Inventory Dashboard', href: '/seller/dashboard/inventory', icon: Boxes },
-    { name: 'Products', href: '/seller/dashboard/products', icon: Box },
-    { name: 'Finance & Settlements', href: '/seller/dashboard/finance', icon: Wallet },
-    { name: 'Analytics Dashboard', href: '/seller/dashboard/analytics', icon: BarChart3 },
-    { name: 'Team Roles', href: '/seller/dashboard/team', icon: Users },
-    { name: 'Warehouses', href: '/seller/dashboard/warehouses', icon: MapPin },
-    { name: 'Store Settings', href: '/seller/dashboard/settings', icon: Settings },
+    { name: 'Overview', href: '/seller/dashboard', icon: LayoutDashboard, lockedWhenPending: false },
+    { name: 'Business Setup', href: '/seller/onboarding/wizard', icon: Settings, lockedWhenPending: false },
+    { name: 'Sales Dashboard', href: '/seller/dashboard/sales', icon: TrendingUp, lockedWhenPending: true },
+    { name: 'Orders Dashboard', href: '/seller/dashboard/orders', icon: ShoppingCart, lockedWhenPending: true },
+    { name: 'Inventory Dashboard', href: '/seller/dashboard/inventory', icon: Boxes, lockedWhenPending: true },
+    { name: 'Products', href: '/seller/dashboard/products', icon: Box, lockedWhenPending: true },
+    { name: 'Finance & Settlements', href: '/seller/dashboard/finance', icon: Wallet, lockedWhenPending: true },
+    { name: 'Analytics Dashboard', href: '/seller/dashboard/analytics', icon: BarChart3, lockedWhenPending: true },
+    { name: 'Warehouses', href: '/seller/dashboard/warehouses', icon: MapPin, lockedWhenPending: true },
+    { name: 'Store Settings', href: '/seller/dashboard/settings', icon: Settings, lockedWhenPending: false },
   ];
 
   return (
@@ -124,18 +128,24 @@ export default function SellerDashboardLayout({
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            const isLocked = (sellerStatus !== 'ACTIVE' && sellerStatus !== 'APPROVED') && item.lockedWhenPending;
+
             return (
               <Link
                 key={item.name}
-                href={item.href}
+                href={isLocked ? '/seller/onboarding/wizard' : item.href}
                 className={`
-                  flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                  flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
                   ${isActive ? 'bg-red-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}
+                  ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}
                 `}
                 onClick={() => setSidebarOpen(false)}
               >
-                <Icon size={18} />
-                {item.name}
+                <div className="flex items-center gap-3">
+                  <Icon size={18} />
+                  {item.name}
+                </div>
+                {isLocked && <Lock size={14} className="text-amber-400" />}
               </Link>
             );
           })}
@@ -173,23 +183,36 @@ export default function SellerDashboardLayout({
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           {sellerStatus !== 'ACTIVE' && sellerStatus !== 'APPROVED' && (
-            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+            <div className="mb-6 p-5 bg-gradient-to-r from-amber-500 to-red-600 rounded-3xl text-white shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-amber-100 text-amber-700 rounded-xl">
-                  <AlertTriangle size={22} />
+                <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
+                  <AlertTriangle size={24} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-900 text-sm">Account Registration & KYC Verification Pending</h4>
-                  <p className="text-xs text-slate-600 mt-0.5">Your profile documents are pending review. Upload GSTIN, PAN, and Bank details to complete verification.</p>
+                  <h4 className="font-black text-lg">Complete your KYC to unlock all seller features.</h4>
+                  <div className="flex items-center gap-3 mt-1">
+                    <div className="w-36 h-2 bg-white/30 rounded-full overflow-hidden">
+                      <div className="h-full bg-white rounded-full transition-all" style={{ width: `${onboardingProgress}%` }} />
+                    </div>
+                    <span className="text-xs font-extrabold uppercase tracking-wider">Progress: {onboardingProgress}%</span>
+                  </div>
                 </div>
               </div>
-              <Link href="/seller/onboarding" className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex-shrink-0">
-                Upload Documents
+              <Link href="/seller/onboarding/wizard" className="px-6 py-3 bg-white text-slate-900 font-extrabold text-xs rounded-xl shadow-lg hover:bg-slate-100 transition-all flex-shrink-0">
+                Continue Setup
               </Link>
             </div>
           )}
           {children}
         </main>
+
+        <WelcomeModal
+          type="INITIAL_REGISTRATION"
+          isOpen={showWelcomeModal}
+          onClose={() => setShowWelcomeModal(false)}
+          vendorName={sellerName}
+          progress={onboardingProgress}
+        />
       </div>
     </div>
   );
