@@ -137,7 +137,7 @@ export default function AnalyticsHub() {
               <div>
                 <div className="flex justify-between items-end mb-2">
                   <p className="text-sm font-semibold text-slate-600">Total Unique Customers</p>
-                  <span className="text-2xl font-black text-slate-900">{data.customers.totalCustomers}</span>
+                  <span className="text-2xl font-black text-slate-900">{data?.customers?.totalCustomers || 0}</span>
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                   <div className="h-full bg-blue-500 rounded-full w-full"></div>
@@ -147,13 +147,13 @@ export default function AnalyticsHub() {
               <div>
                 <div className="flex justify-between items-end mb-2">
                   <p className="text-sm font-semibold text-slate-600">Repeat Customers</p>
-                  <span className="text-2xl font-black text-slate-900">{data.customers.repeatCustomers}</span>
+                  <span className="text-2xl font-black text-slate-900">{data?.customers?.repeatCustomers || 0}</span>
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-purple-500 rounded-full" style={{ width: data.customers.totalCustomers ? `${(data.customers.repeatCustomers / data.customers.totalCustomers) * 100}%` : '0%' }}></div>
+                  <div className="h-full bg-purple-500 rounded-full" style={{ width: data?.customers?.totalCustomers ? `${((data?.customers?.repeatCustomers || 0) / data.customers.totalCustomers) * 100}%` : '0%' }}></div>
                 </div>
                 <p className="text-xs text-slate-500 mt-2 text-right">
-                  {data.customers.totalCustomers ? Math.round((data.customers.repeatCustomers / data.customers.totalCustomers) * 100) : 0}% Retention Rate
+                  {data?.customers?.totalCustomers ? Math.round(((data?.customers?.repeatCustomers || 0) / data.customers.totalCustomers) * 100) : 0}% Retention Rate
                 </p>
               </div>
             </div>
@@ -166,10 +166,10 @@ export default function AnalyticsHub() {
               <div className="p-4 border border-slate-100 rounded-xl bg-slate-50 flex justify-between items-center">
                 <div>
                   <h4 className="font-bold text-slate-900 text-sm">Active Rentals</h4>
-                  <p className="text-xs text-slate-500">{data.specialty.activeRentals} currently out</p>
+                  <p className="text-xs text-slate-500">{data?.specialty?.activeRentals ?? data?.services?.activeRentals ?? 0} currently out</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-slate-900">₹{data.specialty.rentalRevenue.toLocaleString()}</p>
+                  <p className="font-bold text-slate-900">₹{(data?.specialty?.rentalRevenue ?? data?.services?.rentalRevenue ?? 0).toLocaleString()}</p>
                   <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Revenue</p>
                 </div>
               </div>
@@ -177,10 +177,10 @@ export default function AnalyticsHub() {
               <div className="p-4 border border-slate-100 rounded-xl bg-slate-50 flex justify-between items-center">
                 <div>
                   <h4 className="font-bold text-slate-900 text-sm">Service Bookings</h4>
-                  <p className="text-xs text-slate-500">{data.specialty.totalServiceBookings} total appointments</p>
+                  <p className="text-xs text-slate-500">{data?.specialty?.totalServiceBookings ?? data?.services?.totalServiceBookings ?? 0} total appointments</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-slate-900">₹{data.specialty.serviceRevenue.toLocaleString()}</p>
+                  <p className="font-bold text-slate-900">₹{(data?.specialty?.serviceRevenue ?? data?.services?.serviceRevenue ?? 0).toLocaleString()}</p>
                   <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Revenue</p>
                 </div>
               </div>
