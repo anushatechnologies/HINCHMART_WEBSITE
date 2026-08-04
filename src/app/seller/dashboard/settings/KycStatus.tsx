@@ -59,8 +59,14 @@ export default function KycStatus() {
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex gap-4">
             <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={24} />
             <div>
-              <h3 className="font-bold text-amber-900 text-lg">Verification Pending</h3>
-              <p className="text-amber-700 mt-1">Our team is currently reviewing your documents. This usually takes 24-48 hours. We will notify you once approved.</p>
+              <h3 className="font-bold text-amber-900 text-lg">Registration & KYC Pending</h3>
+              <p className="text-amber-700 mt-1">Your business documents are pending submission or admin approval. Please ensure all details are provided.</p>
+              <button 
+                onClick={() => router.push('/seller/onboarding')}
+                className="mt-4 px-5 py-2 bg-amber-600 text-white rounded-lg font-bold text-sm hover:bg-amber-700 transition-colors shadow-sm"
+              >
+                Upload / Update Documents
+              </button>
             </div>
           </div>
         )}

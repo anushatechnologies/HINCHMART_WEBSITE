@@ -18,7 +18,8 @@ import {
   Box,
   Boxes,
   Wallet,
-  BarChart3
+  BarChart3,
+  AlertTriangle
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -110,10 +111,10 @@ export default function SellerDashboardLayout({
             </div>
             <div>
               <p className="text-sm font-semibold truncate w-40">{sellerName}</p>
-              {sellerStatus === 'ACTIVE' ? (
-                <p className="text-xs text-green-400">Verified Seller</p>
+              {sellerStatus === 'ACTIVE' || sellerStatus === 'APPROVED' ? (
+                <p className="text-xs text-emerald-400 font-semibold">Verified Seller</p>
               ) : (
-                <p className="text-xs text-amber-400">Pending Approval</p>
+                <p className="text-xs text-amber-400 font-semibold">Registration Pending</p>
               )}
             </div>
           </div>
@@ -171,6 +172,22 @@ export default function SellerDashboardLayout({
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          {sellerStatus !== 'ACTIVE' && sellerStatus !== 'APPROVED' && (
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-100 text-amber-700 rounded-xl">
+                  <AlertTriangle size={22} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">Account Registration & KYC Verification Pending</h4>
+                  <p className="text-xs text-slate-600 mt-0.5">Your profile documents are pending review. Upload GSTIN, PAN, and Bank details to complete verification.</p>
+                </div>
+              </div>
+              <Link href="/seller/onboarding" className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex-shrink-0">
+                Upload Documents
+              </Link>
+            </div>
+          )}
           {children}
         </main>
       </div>
