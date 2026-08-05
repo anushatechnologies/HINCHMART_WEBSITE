@@ -219,7 +219,7 @@ export default async function ProductsPage({ searchParams }: Props) {
                         {product.moq > 1 && (
                           <span className="absolute bottom-2 left-2 bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">MOQ: {product.moq}</span>
                         )}
-                        {product.isRentable && (
+                        {product.productType === 'RENTAL' && (
                           <span className="absolute bottom-2 right-2 bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded uppercase shadow-sm">🔑 Rent</span>
                         )}
                         <button className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center text-slate-400 hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-all">
@@ -265,15 +265,20 @@ export default async function ProductsPage({ searchParams }: Props) {
                           </p>
                         )}
 
-                        {product.isRentable && product.rentPricePerDay && (
-                          <p className="text-[10px] text-amber-700 font-bold mb-2 bg-amber-50 px-2 py-0.5 rounded mt-2">
-                            🔑 Rent from ₹{Number(product.rentPricePerDay).toLocaleString('en-IN')}/day
-                          </p>
+                        {product.productType === 'RENTAL' ? (
+                          <>
+                            <p className="text-[10px] text-amber-700 font-bold mb-2 bg-amber-50 px-2 py-0.5 rounded mt-2">
+                              🔑 Rent from ₹{Number(product.rentalDetails?.pricePerDay || 0).toLocaleString('en-IN')}/day
+                            </p>
+                            <button className={`border-2 border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white text-xs font-bold py-2 rounded-lg transition-all uppercase tracking-wider mt-auto ${view === 'list' ? 'w-full' : 'w-full mt-3'}`}>
+                              Book Rental
+                            </button>
+                          </>
+                        ) : (
+                          <button className={`border-2 border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white text-xs font-bold py-2 rounded-lg transition-all uppercase tracking-wider mt-auto ${view === 'list' ? 'w-full' : 'w-full mt-3'}`}>
+                            Add to Cart
+                          </button>
                         )}
-
-                        <button className={`border-2 border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white text-xs font-bold py-2 rounded-lg transition-all uppercase tracking-wider mt-auto ${view === 'list' ? 'w-full' : 'w-full mt-3'}`}>
-                          Add to Cart
-                        </button>
                       </div>
                     </Link>
                   );

@@ -116,9 +116,9 @@ export default function OnboardingWizard() {
 
   const [formData, setFormData] = useState({
     companyName: '', ownerName: '', businessType: 'RETAILER', contactEmail: '', contactPhone: '',
-    gstin: '', panNumber: '', bankAccountNumber: '', ifscCode: '', bankName: '',
+    gstin: '', panNumber: '', bankAccountNumber: '', ifscCode: '', bankName: '', cancelledChequeUrl: '',
     pickupAddress: '', businessAddress: '', msmeNumber: '', cinNumber: '',
-    businessDocUrl: '', aboutStore: '', logoUrl: '', bannerUrl: ''
+    businessDocUrl: '', gstCertificateUrl: '', panCardUrl: '', businessRegistrationUrl: '', addressProofUrl: '', msmeCertificateUrl: '', tradeLicenseUrl: '', aboutStore: '', logoUrl: '', bannerUrl: ''
   });
 
   useEffect(() => {
@@ -138,7 +138,14 @@ export default function OnboardingWizard() {
         bankAccountNumber: parsed.bankAccountNumber || '',
         ifscCode: parsed.ifscCode || '',
         bankName: parsed.bankName || '',
-        pickupAddress: parsed.pickupAddress || ''
+        cancelledChequeUrl: parsed.cancelledChequeUrl || '',
+        pickupAddress: parsed.pickupAddress || '',
+        gstCertificateUrl: parsed.gstCertificateUrl || '',
+        panCardUrl: parsed.panCardUrl || '',
+        businessRegistrationUrl: parsed.businessRegistrationUrl || '',
+        addressProofUrl: parsed.addressProofUrl || '',
+        msmeCertificateUrl: parsed.msmeCertificateUrl || '',
+        tradeLicenseUrl: parsed.tradeLicenseUrl || ''
       }));
     }
   }, []);
@@ -147,8 +154,42 @@ export default function OnboardingWizard() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const data = new FormData();
+    data.append('file', file);
+    try {
+      const res = await fetch(`${API}/upload`, { method: 'POST', body: data });
+      const json = await res.json();
+      if (json.success) {
+        setFormData(prev => ({ ...prev, [fieldName]: json.url }));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleNext = async () => {
     if (!vendorId) return;
+    
+    // Validations
+    if (currentStep === 2) {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(formData.gstin)) {
+        alert("Invalid GSTIN format. Please enter a valid 15-digit GST number (e.g. 22AAAAA0000A1Z5).");
+        return;
+      }
+    }
+    
+    if (currentStep === 3) {
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(formData.panNumber)) {
+        alert("Invalid PAN format. Please enter a valid 10-character PAN (e.g. ABCDE1234F).");
+        return;
+      }
+    }
+    
     setLoading(true);
     try {
       await fetch(`${API}/vendors/onboarding/step`, {
@@ -368,6 +409,21 @@ export default function OnboardingWizard() {
                             <FloatingInput label="IFSC Code *" name="ifscCode" value={formData.ifscCode} onChange={handleChange} required mono placeholder="SBIN0001234" />
                             <FloatingInput label="Bank Name *" name="bankName" value={formData.bankName} onChange={handleChange} required />
                           </div>
+                          
+                          <div className="pt-2">
+                            <label className="block text-sm font-semibold text-white/70 mb-2">Cancelled Cheque (Optional but recommended for faster KYC)</label>
+                            <div className="flex items-center gap-3">
+                              <label className="flex items-center justify-center px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl cursor-pointer text-sm font-medium text-white transition-colors">
+                                <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleFileUpload(e, 'cancelledChequeUrl')} />
+                                Upload File
+                              </label>
+                              {formData.cancelledChequeUrl && (
+                                <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
+                                  <CheckCircle size={14} /> Uploaded Successfully
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       )}
 
@@ -379,9 +435,39 @@ export default function OnboardingWizard() {
                       )}
 
                       {currentStep === 6 && (
-                        <div className="space-y-4">
-                          <FloatingInput label="GST Certificate / Canceled Cheque URL" name="businessDocUrl" value={formData.businessDocUrl} onChange={handleChange} type="url" placeholder="https://..." />
-                          <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-6">
+                          <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-start gap-3 mb-2">
+                            <FileText size={18} className="text-indigo-400 shrink-0 mt-0.5" />
+                            <p className="text-indigo-200 text-xs leading-relaxed">Upload clear, legible copies of your business documents. Accepted formats: PDF, JPG, PNG (Max 5MB each).</p>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {[
+                              { label: 'GST Certificate *', field: 'gstCertificateUrl' },
+                              { label: 'PAN Card *', field: 'panCardUrl' },
+                              { label: 'Business Registration *', field: 'businessRegistrationUrl' },
+                              { label: 'Address Proof *', field: 'addressProofUrl' },
+                              { label: 'MSME Certificate (Optional)', field: 'msmeCertificateUrl' },
+                              { label: 'Trade License (Optional)', field: 'tradeLicenseUrl' }
+                            ].map(doc => (
+                              <div key={doc.field} className="p-4 rounded-xl border border-white/5 bg-white/[0.02]">
+                                <label className="block text-sm font-semibold text-white/80 mb-3">{doc.label}</label>
+                                <div className="flex flex-col gap-3">
+                                  <label className="flex items-center justify-center px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl cursor-pointer text-sm font-medium text-white transition-colors w-full text-center">
+                                    <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleFileUpload(e, doc.field)} />
+                                    Choose File
+                                  </label>
+                                  {(formData as any)[doc.field] && (
+                                    <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold bg-emerald-500/10 px-3 py-2 rounded-lg border border-emerald-500/20">
+                                      <CheckCircle size={14} /> Uploaded Successfully
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          <div className="pt-4 border-t border-white/10 grid grid-cols-2 gap-4">
                             <FloatingInput label="MSME / Udyam Number (Optional)" name="msmeNumber" value={formData.msmeNumber} onChange={handleChange} mono placeholder="UDYAM-XX-00-0000000" />
                             <FloatingInput label="CIN Number (Optional)" name="cinNumber" value={formData.cinNumber} onChange={handleChange} mono placeholder="U12345MH2020PTC000000" />
                           </div>
@@ -407,6 +493,7 @@ export default function OnboardingWizard() {
                             { label: 'PAN', value: formData.panNumber || 'Not provided', mono: true },
                             { label: 'Bank Account', value: formData.bankAccountNumber ? '••••••' + formData.bankAccountNumber.slice(-4) : 'Not provided', mono: true },
                             { label: 'IFSC', value: formData.ifscCode || 'Not provided', mono: true },
+                            { label: 'Cancelled Cheque', value: formData.cancelledChequeUrl ? 'Uploaded' : 'Pending', mono: true },
                           ].map(row => (
                             <div key={row.label} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
                               <span className="text-white/40 text-xs font-bold uppercase tracking-wider">{row.label}</span>

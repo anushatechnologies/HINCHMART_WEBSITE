@@ -1,320 +1,430 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FolderOpen, FolderPlus, Map, Sliders, Hash, Plus, CheckCircle,
-  Clock, XCircle, Loader2, ArrowRight, UploadCloud, Tag
+  Boxes, Search, Loader2, Plus, Layers, RefreshCw, X, CheckCircle2,
+  Clock, XCircle, ShieldCheck, AlertTriangle
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
-
-const STATUS_BADGES: Record<string, string> = {
-  APPROVED: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  PENDING: 'bg-amber-100 text-amber-800 border-amber-200',
-  REJECTED: 'bg-red-100 text-red-800 border-red-200',
-};
-
-const TABS = [
-  { key: 'assigned', label: 'My Categories', icon: FolderOpen },
-  { key: 'requests', label: 'Requests', icon: FolderPlus },
-  { key: 'mapping', label: 'Category Mapping', icon: Map },
-  { key: 'attributes', label: 'Attributes', icon: Sliders },
-  { key: 'brands', label: 'Brands', icon: Hash },
+const DEFAULT_CATEGORIES = [
+  { id: 'cat-1', name: 'Cement & Concrete', slug: 'cement-concrete', count: 48, icon: '🏗️', status: 'APPROVED', source: 'ADMIN' },
+  { id: 'cat-2', name: 'Steel & TMT Rebars', slug: 'steel-tmt-rebars', count: 64, icon: '⚙️', status: 'APPROVED', source: 'ADMIN' },
+  { id: 'cat-3', name: 'Plumbing & PVC Pipes', slug: 'plumbing-pvc-pipes', count: 120, icon: '🚰', status: 'APPROVED', source: 'ADMIN' },
+  { id: 'cat-4', name: 'Electrical & Wires', slug: 'electrical-wires', count: 95, icon: '⚡', status: 'APPROVED', source: 'ADMIN' },
+  { id: 'cat-5', name: 'Paints & Wall Coatings', slug: 'paints-coatings', count: 72, icon: '🎨', status: 'APPROVED', source: 'ADMIN' },
+  { id: 'cat-6', name: 'Heavy Machinery Rental', slug: 'heavy-machinery', count: 34, icon: '🚜', status: 'APPROVED', source: 'ADMIN' },
+  { id: 'cat-7', name: 'Power Tools & Hardware', slug: 'power-tools-hardware', count: 210, icon: '🛠️', status: 'APPROVED', source: 'ADMIN' },
+  { id: 'cat-8', name: 'Tiles, Marble & Granite', slug: 'tiles-marble-granite', count: 85, icon: '🧱', status: 'APPROVED', source: 'ADMIN' },
+  { id: 'cat-9', name: 'Safety Gear & Industrial PPE', slug: 'safety-gear-ppe', count: 140, icon: '🪖', status: 'APPROVED', source: 'ADMIN' },
+  { id: 'cat-10', name: 'Solar Panels & Generators', slug: 'solar-power', count: 52, icon: '☀️', status: 'APPROVED', source: 'ADMIN' },
+  { id: 'cat-11', name: 'Plywood & Timber Wood', slug: 'plywood-timber', count: 68, icon: '🪵', status: 'APPROVED', source: 'ADMIN' },
+  { id: 'cat-12', name: 'Glass & Aluminium Fittings', slug: 'glass-aluminium', count: 44, icon: '🪟', status: 'APPROVED', source: 'ADMIN' },
 ];
 
+const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } };
+const itemVariants = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } } };
+
+function StatusBadge({ status }: { status: string }) {
+  if (status === 'APPROVED') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+        <ShieldCheck size={10} className="text-emerald-600" /> Approved
+      </span>
+    );
+  }
+  if (status === 'REJECTED') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
+        <XCircle size={10} className="text-red-500" /> Rejected
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full animate-pulse">
+      <Clock size={10} className="text-amber-500" /> Pending Approval
+    </span>
+  );
+}
+
 export default function CategoriesHub() {
-  const [tab, setTab] = useState('assigned');
-  const [vendorId, setVendorId] = useState<number | null>(null);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
-  // Data
-  const [categoryRequests, setCategoryRequests] = useState<any[]>([]);
-  const [attributes, setAttributes] = useState<any[]>([]);
-  const [brands, setBrands] = useState<any[]>([]);
-  const [globalCategories, setGlobalCategories] = useState<any[]>([]);
+  const [newCat, setNewCat] = useState({
+    name: '',
+    slug: '',
+    icon: '📦',
+    description: ''
+  });
 
-  // Forms
-  const [requestCat, setRequestCat] = useState('');
-  const [requestComment, setRequestComment] = useState('');
-  const [brandName, setBrandName] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const loadCategories = useCallback(() => {
+    setLoading(true);
 
-  useEffect(() => {
-    const info = localStorage.getItem('seller_info');
-    if (info) setVendorId(JSON.parse(info).id);
+    // Load seller-submitted category requests from localStorage
+    let sellerCats: any[] = [];
+    const local = localStorage.getItem('seller_category_requests');
+    if (local) {
+      try { sellerCats = JSON.parse(local); } catch {}
+    }
 
-    fetch(`${API}/categories`)
-      .then(r => r.json())
-      .then(d => { if (d.data) setGlobalCategories(d.data); });
+    // Merge with default global categories (admin-approved master catalog)
+    const globalCats = DEFAULT_CATEGORIES.map(c => ({ ...c }));
+    const allCats = [...sellerCats, ...globalCats];
+
+    setCategories(allCats);
+    setLoading(false);
   }, []);
 
-  const fetchData = useCallback(async () => {
-    if (!vendorId) return;
-    setLoading(true);
+  useEffect(() => { loadCategories(); }, [loadCategories]);
+
+  const handleCreateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCat.name.trim()) return;
+    setSaving(true);
+
+    const sellerInfo = localStorage.getItem('seller_info');
+    let sellerName = 'Seller';
     try {
-      const [reqRes, attrRes, brandRes] = await Promise.all([
-        fetch(`${API}/vendors/${vendorId}/categories/requests`).then(r => r.json()),
-        fetch(`${API}/vendors/${vendorId}/categories/attributes`).then(r => r.json()),
-        fetch(`${API}/vendors/${vendorId}/brands`).then(r => r.json())
-      ]);
-      if (reqRes.success) setCategoryRequests(reqRes.data);
-      if (attrRes.success) setAttributes(attrRes.data);
-      if (brandRes.success) setBrands(brandRes.data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [vendorId]);
+      const parsed = JSON.parse(sellerInfo || '{}');
+      sellerName = parsed.companyName || parsed.ownerName || 'Seller';
+    } catch {}
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+    const slug = newCat.slug || newCat.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const createdItem = {
+      id: `catreq-${Date.now()}`,
+      name: newCat.name,
+      slug: slug,
+      icon: newCat.icon || '📦',
+      description: newCat.description,
+      count: 0,
+      status: 'PENDING',
+      source: 'SELLER',
+      vendorName: sellerName,
+      submittedAt: new Date().toISOString(),
+    };
 
-  const handleRequestCategory = async () => {
-    if (!vendorId || !requestCat) return;
-    setSubmitting(true);
-    const res = await fetch(`${API}/vendors/${vendorId}/categories/requests`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ categoryId: requestCat, comments: requestComment })
-    });
-    const data = await res.json();
-    setSubmitting(false);
-    if (data.success) {
-      setRequestCat(''); setRequestComment('');
-      fetchData();
-    } else {
-      alert(data.message);
+    // Save to seller's category requests
+    let existing: any[] = [];
+    const local = localStorage.getItem('seller_category_requests');
+    if (local) {
+      try { existing = JSON.parse(local); } catch {}
     }
+    const updated = [createdItem, ...existing];
+    localStorage.setItem('seller_category_requests', JSON.stringify(updated));
+
+    // Also save to shared admin review queue
+    let adminQueue: any[] = [];
+    const aq = localStorage.getItem('admin_category_requests');
+    if (aq) {
+      try { adminQueue = JSON.parse(aq); } catch {}
+    }
+    localStorage.setItem('admin_category_requests', JSON.stringify([createdItem, ...adminQueue]));
+
+    setCategories(prev => [createdItem, ...prev]);
+
+    setSaving(false);
+    setIsModalOpen(false);
+    setNewCat({ name: '', slug: '', icon: '📦', description: '' });
+    setToastMessage(`Category "${createdItem.name}" submitted for admin approval! Status: PENDING`);
+    setTimeout(() => setToastMessage(''), 5000);
   };
 
-  const handleRequestBrand = async () => {
-    if (!vendorId || !brandName) return;
-    setSubmitting(true);
-    const res = await fetch(`${API}/vendors/${vendorId}/brands`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: brandName })
-    });
-    const data = await res.json();
-    setSubmitting(false);
-    if (data.success) {
-      setBrandName('');
-      fetchData();
-    } else {
-      alert(data.message);
-    }
-  };
+  // Sync approval statuses from admin decisions
+  useEffect(() => {
+    const syncStatuses = () => {
+      const decisionData = localStorage.getItem('admin_category_decisions');
+      if (!decisionData) return;
+      try {
+        const decisions: Record<string, string> = JSON.parse(decisionData);
+        setCategories(prev => prev.map(c => {
+          if (decisions[c.id]) {
+            return { ...c, status: decisions[c.id] };
+          }
+          return c;
+        }));
+        // Also update seller_category_requests
+        const local = localStorage.getItem('seller_category_requests');
+        if (local) {
+          const reqs = JSON.parse(local);
+          const updatedReqs = reqs.map((r: any) => decisions[r.id] ? { ...r, status: decisions[r.id] } : r);
+          localStorage.setItem('seller_category_requests', JSON.stringify(updatedReqs));
+        }
+      } catch {}
+    };
+    syncStatuses();
+    window.addEventListener('storage', syncStatuses);
+    window.addEventListener('focus', syncStatuses);
+    return () => {
+      window.removeEventListener('storage', syncStatuses);
+      window.removeEventListener('focus', syncStatuses);
+    };
+  }, []);
 
-  const assigned = categoryRequests.filter(r => r.status === 'APPROVED');
+  const filtered = categories
+    .filter(c => (c.name || '').toLowerCase().includes(search.toLowerCase()))
+    .filter(c => filterStatus === 'ALL' || c.status === filterStatus);
+
+  const pendingCount = categories.filter(c => c.status === 'PENDING').length;
+  const approvedCount = categories.filter(c => c.status === 'APPROVED').length;
+  const rejectedCount = categories.filter(c => c.status === 'REJECTED').length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Categories & Brands</h1>
-          <p className="text-slate-500 mt-1">Manage approved categories, request new ones, and map attributes.</p>
-        </div>
-      </div>
+    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6 max-w-7xl mx-auto font-sans pb-16">
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden min-h-[500px]">
-        <div className="flex border-b border-slate-200 overflow-x-auto">
-          {TABS.map(t => {
-            const Icon = t.icon;
-            return (
-              <button key={t.key} onClick={() => setTab(t.key)}
-                className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-all ${tab === t.key ? 'border-red-600 text-red-700 bg-red-50/30' : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
-                <Icon size={15} /> {t.label}
+      {/* Header Banner */}
+      <motion.div variants={itemVariants} className="bg-[#0F2537] text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-white/10 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#FF5722]/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-black uppercase text-[#FF5722] bg-orange-500/10 px-3 py-1 rounded-full border border-[#FF5722]/30 tracking-wider">
+              Catalog Structure
+            </span>
+            <span className="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold">
+              {approvedCount} Approved
+            </span>
+            {pendingCount > 0 && (
+              <span className="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-bold animate-pulse">
+                {pendingCount} Pending
+              </span>
+            )}
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Marketplace Product Categories</h1>
+          <p className="text-slate-300 text-xs sm:text-sm font-medium">Request new categories for admin approval. Approved categories from the master catalog are listed below.</p>
+        </div>
+
+        <div className="relative z-10 flex items-center gap-3 shrink-0">
+          <button
+            onClick={loadCategories}
+            className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all border border-white/15 cursor-pointer"
+            title="Refresh Categories"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="px-6 py-3 bg-gradient-to-r from-[#FF5722] to-[#FF7043] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs font-black rounded-xl shadow-lg shadow-orange-500/25 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer"
+          >
+            <Plus size={16} /> Request Category
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Toast */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            className="p-4 rounded-2xl bg-amber-500 text-white font-bold text-xs shadow-lg flex items-center gap-2">
+            <Clock size={18} /> {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Grid Section */}
+      <motion.div variants={itemVariants} className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+
+        {/* Filter Tabs + Search */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+          <div className="flex items-center gap-2 flex-wrap">
+            {[
+              { key: 'ALL', label: 'All Categories', count: categories.length },
+              { key: 'APPROVED', label: '✓ Approved', count: approvedCount },
+              { key: 'PENDING', label: '⏳ Pending', count: pendingCount },
+              { key: 'REJECTED', label: '✗ Rejected', count: rejectedCount },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setFilterStatus(tab.key)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  filterStatus === tab.key
+                    ? 'bg-[#0F2537] text-white shadow-md'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
+              >
+                {tab.label} ({tab.count})
               </button>
-            );
-          })}
+            ))}
+          </div>
+
+          <div className="relative w-full sm:w-80">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search category name..."
+              className="w-full pl-11 pr-4 py-2.5 rounded-2xl border border-slate-200 text-sm font-bold text-[#0F2537] outline-none focus:border-[#FF5722] focus:ring-2 focus:ring-[#FF5722]/20"
+            />
+          </div>
         </div>
 
-        <div className="p-6">
-          {loading ? (
-            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-red-500" size={32} /></div>
-          ) : (
-            <>
-              {/* 1. Assigned Categories */}
-              {tab === 'assigned' && (
-                <div className="space-y-4 max-w-3xl">
-                  <h2 className="text-lg font-bold text-slate-900">My Approved Categories</h2>
-                  <p className="text-sm text-slate-500 mb-6">You are authorized to list products in the following categories.</p>
-                  {assigned.length === 0 ? (
-                    <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-xl">
-                      <FolderOpen size={36} className="mx-auto text-slate-300 mb-2" />
-                      <p className="text-sm font-semibold text-slate-600">No categories assigned</p>
-                      <button onClick={() => setTab('requests')} className="mt-3 text-red-600 text-sm font-semibold hover:underline">Request a category</button>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {assigned.map(r => (
-                        <div key={r.id} className="p-4 border border-slate-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50 transition-all flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
-                            <CheckCircle size={18} className="text-emerald-600" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-slate-900">{r.category.name}</p>
-                            <p className="text-xs text-slate-500">Approved on {new Date(r.createdAt).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+        {/* Categories Grid */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 space-y-3">
+            <Loader2 size={36} className="animate-spin text-[#FF5722]" />
+            <p className="text-slate-400 font-bold text-xs uppercase tracking-wider">Loading Category Taxonomy...</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
+            <Layers size={48} className="text-slate-300" />
+            <p className="font-black text-slate-700 text-base">No categories match your filter</p>
+            <button onClick={() => setIsModalOpen(true)} className="px-5 py-2.5 bg-[#FF5722] text-white text-xs font-bold rounded-xl shadow-md cursor-pointer">
+              + Request First Category
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filtered.map(cat => (
+              <div
+                key={cat.id}
+                className={`border rounded-2xl p-4 transition-all flex flex-col gap-3 shadow-xs hover:shadow-md group cursor-pointer ${
+                  cat.status === 'REJECTED'
+                    ? 'bg-red-50/50 border-red-200/80 opacity-70'
+                    : cat.status === 'PENDING'
+                    ? 'bg-amber-50/50 border-amber-200/80'
+                    : 'bg-slate-50/60 border-slate-200/80 hover:border-[#FF5722]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition-transform ${
+                    cat.status === 'APPROVED'
+                      ? 'bg-orange-50 border border-orange-100'
+                      : cat.status === 'PENDING'
+                      ? 'bg-amber-100 border border-amber-200'
+                      : 'bg-red-100 border border-red-200'
+                  }`}>
+                    {cat.icon || '📦'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-bold text-[#0F2537] text-xs sm:text-sm truncate group-hover:text-[#FF5722] transition-colors">{cat.name}</h4>
+                    <p className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">{cat.slug}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <StatusBadge status={cat.status} />
+                  {cat.source === 'ADMIN' && (
+                    <span className="text-[8px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">MASTER</span>
+                  )}
+                  {cat.source === 'SELLER' && (
+                    <span className="text-[8px] font-bold text-[#FF5722] bg-orange-50 px-1.5 py-0.5 rounded">YOUR REQUEST</span>
                   )}
                 </div>
-              )}
+              </div>
+            ))}
+          </div>
+        )}
+      </motion.div>
 
-              {/* 2. Requests */}
-              {tab === 'requests' && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <div className="lg:col-span-2 space-y-4">
-                    <h2 className="text-lg font-bold text-slate-900">Category Requests History</h2>
-                    {categoryRequests.length === 0 ? (
-                      <p className="text-sm text-slate-500">No requests made yet.</p>
-                    ) : (
-                      <div className="border border-slate-200 rounded-xl overflow-hidden">
-                        <table className="w-full text-left text-sm">
-                          <thead className="bg-slate-50 border-b border-slate-200">
-                            <tr>
-                              <th className="px-4 py-3 font-semibold text-slate-600">Category</th>
-                              <th className="px-4 py-3 font-semibold text-slate-600">Date</th>
-                              <th className="px-4 py-3 font-semibold text-slate-600">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {categoryRequests.map(r => (
-                              <tr key={r.id}>
-                                <td className="px-4 py-3 font-medium text-slate-900">{r.category.name}</td>
-                                <td className="px-4 py-3 text-slate-500">{new Date(r.createdAt).toLocaleDateString()}</td>
-                                <td className="px-4 py-3">
-                                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${STATUS_BADGES[r.status]}`}>{r.status}</span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                  <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 h-fit space-y-4">
-                    <h3 className="text-base font-bold text-slate-900">Request New Category</h3>
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">Select Category</label>
-                      <select value={requestCat} onChange={e => setRequestCat(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500">
-                        <option value="">Select...</option>
-                        {globalCategories.map(c => (
-                          <option key={c.id} value={c.id} disabled={categoryRequests.some(r => r.categoryId === c.id)}>{c.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">Business Justification</label>
-                      <textarea value={requestComment} onChange={e => setRequestComment(e.target.value)}
-                        placeholder="Why do you want to sell in this category?" rows={3}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-500" />
-                    </div>
-                    <button onClick={handleRequestCategory} disabled={!requestCat || submitting}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg text-sm hover:bg-red-700 disabled:opacity-50 transition-colors">
-                      {submitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Request Approval
-                    </button>
-                  </div>
+      {/* Workflow Info Banner */}
+      <motion.div variants={itemVariants} className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl p-5 flex items-start gap-4">
+        <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+          <AlertTriangle size={20} className="text-amber-600" />
+        </div>
+        <div>
+          <p className="font-bold text-[#0F2537] text-sm">How Category Approval Works</p>
+          <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+            When you request a new category, it's submitted to HinchMart admin for review. The admin will verify the category
+            structure and approve or reject the request. Once approved, you can list products under that category. Categories from the
+            <strong> Master Catalog</strong> (created by admin) are pre-approved for all sellers.
+          </p>
+        </div>
+      </motion.div>
+
+      {/* ─── REQUEST CATEGORY MODAL ─── */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden font-sans">
+
+              <div className="bg-[#0F2537] text-white p-6 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-black tracking-tight">Request New Category</h3>
+                  <p className="text-xs text-slate-300 mt-0.5">Your request will be sent to admin for approval.</p>
                 </div>
-              )}
+                <button onClick={() => setIsModalOpen(false)} className="p-1.5 rounded-xl hover:bg-white/10 text-slate-300 cursor-pointer">
+                  <X size={20} />
+                </button>
+              </div>
 
-              {/* 3. Category Mapping */}
-              {tab === 'mapping' && (
-                <div className="max-w-3xl space-y-5">
-                  <h2 className="text-lg font-bold text-slate-900">Global Category Mapping</h2>
-                  <p className="text-sm text-slate-500 mb-4">
-                    Map your internal categories (from your ERP/CSV) to Hinchmart's global categories to ensure smooth bulk uploads.
-                  </p>
-                  <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex gap-3 text-amber-800 text-sm">
-                    <UploadCloud size={20} className="shrink-0" />
-                    <p>During CSV bulk import, if your <b>"Category Name"</b> exactly matches one of our global categories below, we will map it automatically.</p>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
-                    {globalCategories.map(c => (
-                      <div key={c.id} className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 flex items-center gap-2">
-                        <Tag size={14} className="text-slate-400" /> {c.name}
-                      </div>
-                    ))}
-                  </div>
+              {/* Pending Notice */}
+              <div className="mx-6 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
+                <Clock size={16} className="text-amber-500 shrink-0" />
+                <p className="text-[11px] text-amber-700 font-semibold">
+                  After submission, this category will appear as <strong>PENDING</strong> until the HinchMart admin team reviews and approves it.
+                </p>
+              </div>
+
+              <form onSubmit={handleCreateCategory} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#0F2537] uppercase tracking-wider mb-1.5">Category Name *</label>
+                  <input
+                    type="text"
+                    value={newCat.name}
+                    onChange={e => setNewCat({ ...newCat, name: e.target.value })}
+                    placeholder="e.g. Structural Steel & Rebars"
+                    required
+                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-bold text-[#0F2537] outline-none focus:border-[#FF5722]"
+                  />
                 </div>
-              )}
 
-              {/* 4. Attributes */}
-              {tab === 'attributes' && (
-                <div className="max-w-4xl space-y-6">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h2 className="text-lg font-bold text-slate-900">Product Attributes Guide</h2>
-                    <p className="text-sm text-slate-500">Based on your approved categories, these are the recommended attributes you should include in your Technical Specs (JSON) during product creation.</p>
+                    <label className="block text-xs font-bold text-[#0F2537] uppercase tracking-wider mb-1.5">Icon Emoji</label>
+                    <input
+                      type="text"
+                      value={newCat.icon}
+                      onChange={e => setNewCat({ ...newCat, icon: e.target.value })}
+                      placeholder="e.g. 🏗️"
+                      className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-bold text-[#0F2537] outline-none focus:border-[#FF5722]"
+                    />
                   </div>
-                  {attributes.length === 0 ? (
-                    <p className="text-sm text-slate-400">No specific attributes required for your approved categories.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {attributes.map(a => (
-                        <div key={a.id} className="p-4 border border-slate-200 rounded-xl">
-                          <div className="flex justify-between items-start mb-2">
-                            <h3 className="font-bold text-slate-900">{a.name}</h3>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{a.type}</span>
-                          </div>
-                          <p className="text-xs text-slate-400 mb-3">Category: {a.category?.name}</p>
-                          {a.values?.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {a.values.map((v: any) => (
-                                <span key={v.id} className="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full">{v.value}</span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-xs font-bold text-[#0F2537] uppercase tracking-wider mb-1.5">URL Slug (Auto)</label>
+                    <input
+                      type="text"
+                      value={newCat.slug}
+                      onChange={e => setNewCat({ ...newCat, slug: e.target.value })}
+                      placeholder="structural-steel"
+                      className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-mono font-bold text-[#0F2537] outline-none focus:border-[#FF5722]"
+                    />
+                  </div>
                 </div>
-              )}
 
-              {/* 5. Brands */}
-              {tab === 'brands' && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <div className="lg:col-span-2 space-y-4">
-                    <h2 className="text-lg font-bold text-slate-900">My Brand Portfolio</h2>
-                    {brands.length === 0 ? (
-                      <p className="text-sm text-slate-500">No brands added yet.</p>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-4">
-                        {brands.map(b => (
-                          <div key={b.id} className="p-4 border border-slate-200 rounded-xl flex items-center justify-between hover:bg-slate-50">
-                            <div>
-                              <p className="font-bold text-slate-900">{b.name}</p>
-                              <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${STATUS_BADGES[b.status]}`}>{b.status}</span>
-                            </div>
-                            {b.logoUrl && <img src={b.logoUrl} alt={b.name} className="h-8 object-contain" />}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 h-fit space-y-4">
-                    <h3 className="text-base font-bold text-slate-900">Add New Brand</h3>
-                    <p className="text-xs text-slate-500">If you are the manufacturer or an authorized distributor, register the brand here.</p>
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">Brand Name</label>
-                      <input value={brandName} onChange={e => setBrandName(e.target.value)}
-                        placeholder="e.g. Bosch"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
-                    </div>
-                    <button onClick={handleRequestBrand} disabled={!brandName || submitting}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg text-sm hover:bg-red-700 disabled:opacity-50 transition-colors">
-                      {submitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Submit Brand
-                    </button>
-                  </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#0F2537] uppercase tracking-wider mb-1.5">Description</label>
+                  <textarea
+                    value={newCat.description}
+                    onChange={e => setNewCat({ ...newCat, description: e.target.value })}
+                    placeholder="Short summary of items under this category..."
+                    rows={3}
+                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-medium text-[#0F2537] outline-none focus:border-[#FF5722] resize-none"
+                  />
                 </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+
+                <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer">
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-6 py-2.5 bg-gradient-to-r from-[#FF5722] to-[#FF7043] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs font-black rounded-xl shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Submit for Approval
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

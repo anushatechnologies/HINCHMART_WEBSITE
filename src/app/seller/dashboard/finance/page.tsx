@@ -5,38 +5,36 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Wallet, FileText, CreditCard, PieChart, ArrowUpRight, ArrowDownRight,
   Download, RefreshCw, Loader2, CheckCircle, Clock, ShieldCheck,
-  Building, IndianRupee, HandCoins, ExternalLink, ChevronRight
+  IndianRupee, HandCoins
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const API = 'http://localhost:5000/api';
 
 const TABS = [
-  { key: 'overview', label: 'Wallet & Profit', icon: PieChart },
-  { key: 'ledger', label: 'Ledger & Settlements', icon: Wallet },
-  { key: 'invoices', label: 'Invoices', icon: FileText },
-  { key: 'credit-notes', label: 'Credit Notes', icon: CreditCard },
-  { key: 'taxes', label: 'Tax & GST Reports', icon: ShieldCheck },
+  { key: 'overview',      label: 'Wallet & Profit',      icon: PieChart },
+  { key: 'ledger',        label: 'Ledger',               icon: Wallet },
+  { key: 'escrow',        label: 'Escrow Holds',         icon: Clock },
+  { key: 'invoices',      label: 'Invoices',             icon: FileText },
+  { key: 'credit-notes',  label: 'Credit Notes',         icon: CreditCard },
+  { key: 'taxes',         label: 'Tax & GST',            icon: ShieldCheck },
 ];
 
-const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
-const itemVariants = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } } };
-
-
+const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
+const itemVariants = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } } };
+const thCls = "px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-wider text-left";
 
 export default function FinanceHub() {
   const [tab, setTab] = useState('overview');
   const [vendorId, setVendorId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Data States
   const [overview, setOverview] = useState<any>({});
   const [ledger, setLedger] = useState<any[]>([]);
+  const [escrows, setEscrows] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [creditNotes, setCreditNotes] = useState<any[]>([]);
   const [taxes, setTaxes] = useState<any[]>([]);
 
-  // Load Vendor ID
   useEffect(() => {
     const info = localStorage.getItem('seller_info');
     if (info) setVendorId(JSON.parse(info).id);
@@ -46,417 +44,246 @@ export default function FinanceHub() {
     if (!vendorId) return;
     setLoading(true);
     try {
-      if (tab === 'overview') {
-        const res = await fetch(`${API}/vendors/finance/overview?vendorId=${vendorId}`);
-        const data = await res.json();
-        if (data.success) setOverview(data.data);
-      }
-      if (tab === 'ledger') {
-        const res = await fetch(`${API}/vendors/finance/wallet?vendorId=${vendorId}`);
-        const data = await res.json();
-        if (data.success) setLedger(data.data);
-      }
-      if (tab === 'invoices') {
-        const res = await fetch(`${API}/vendors/finance/invoices?vendorId=${vendorId}`);
-        const data = await res.json();
-        if (data.success) setInvoices(data.data);
-      }
-      if (tab === 'credit-notes') {
-        const res = await fetch(`${API}/vendors/finance/credit-notes?vendorId=${vendorId}`);
-        const data = await res.json();
-        if (data.success) setCreditNotes(data.data);
-      }
-      if (tab === 'taxes') {
-        const res = await fetch(`${API}/vendors/finance/taxes?vendorId=${vendorId}`);
-        const data = await res.json();
-        if (data.success) setTaxes(data.data);
-      }
+      if (tab === 'overview') { const r = await fetch(`${API}/vendors/finance/overview?vendorId=${vendorId}`); const d = await r.json(); if (d.success) setOverview(d.data); }
+      if (tab === 'ledger') { const r = await fetch(`${API}/vendors/finance/wallet?vendorId=${vendorId}`); const d = await r.json(); if (d.success) setLedger(d.data); }
+      if (tab === 'invoices') { const r = await fetch(`${API}/vendors/finance/invoices?vendorId=${vendorId}`); const d = await r.json(); if (d.success) setInvoices(d.data); }
+      if (tab === 'taxes') { const r = await fetch(`${API}/vendors/finance/taxes?vendorId=${vendorId}`); const d = await r.json(); if (d.success) setTaxes(d.data); }
+      if (tab === 'escrow') { const r = await fetch(`${API}/settlements/escrow?vendorId=${vendorId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('sellerToken')}` } }); const d = await r.json(); if (d.success) setEscrows(d.data); }
     } catch (e) { console.error(e); }
     setLoading(false);
   }, [vendorId, tab]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const statCards = [
+    { label: 'Gross Revenue',   value: overview.totalRevenue || 0,  icon: ArrowUpRight,   bg: 'bg-emerald-50', border: 'border-emerald-200', iconBg: 'bg-emerald-100', iconText: 'text-emerald-600', text: 'text-emerald-700' },
+    { label: 'Platform Fees',   value: overview.platformFees || 0,  icon: ArrowDownRight, bg: 'bg-red-50',     border: 'border-red-200',     iconBg: 'bg-red-100',     iconText: 'text-red-600',     text: 'text-red-700' },
+    { label: 'Pending',         value: overview.totalPending || 0,  icon: Clock,          bg: 'bg-amber-50',   border: 'border-amber-200',   iconBg: 'bg-amber-100',   iconText: 'text-amber-600',   text: 'text-amber-700' },
+    { label: 'Net Profit',      value: overview.netProfit || 0,     icon: PieChart,       bg: 'bg-violet-50',  border: 'border-violet-200',  iconBg: 'bg-violet-100',  iconText: 'text-violet-600',  text: 'text-violet-700' },
+  ];
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6">
-      
+    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-5 max-w-6xl mx-auto">
       {/* Header */}
-      <motion.div variants={itemVariants} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Finance & Accounting</h1>
-          <p className="text-slate-500 mt-2 flex items-center gap-2">
-            <HandCoins size={16} className="text-purple-500" /> Track wallet balances, download invoices, and manage tax reports.
-          </p>
+          <h1 className="text-2xl font-black text-gray-900">Finance & Accounting</h1>
+          <p className="text-gray-500 text-sm mt-0.5 flex items-center gap-1.5"><HandCoins size={13} className="text-[#E53935]" /> Track wallet, settlements, invoices, and tax reports.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-slate-700 text-sm font-bold hover:bg-slate-50 transition-colors shadow-sm">
-            <Download size={16} /> Export Data
+          <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-600 text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm">
+            <Download size={14} /> Export
           </button>
-          <button onClick={loadData} className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-xl shadow-lg shadow-slate-900/20 transition-all hover:-translate-y-0.5">
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Sync Ledger
+          <button onClick={loadData} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#E53935] to-[#F06292] text-white text-sm font-bold rounded-xl shadow-lg shadow-red-400/25 hover:from-[#c62828] hover:to-[#e91e63] transition-all active:scale-95">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Sync Ledger
           </button>
         </div>
       </motion.div>
 
-      {/* Main Container */}
-      <motion.div variants={itemVariants} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden min-h-[600px] flex flex-col">
-        
-        {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-100 overflow-x-auto bg-slate-50/50">
+      {/* Main Card */}
+      <motion.div variants={itemVariants} className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+        {/* Tabs */}
+        <div className="flex border-b border-gray-100 overflow-x-auto">
           {TABS.map(t => {
             const Icon = t.icon;
             const isActive = tab === t.key;
             return (
-              <button 
-                key={t.key} 
-                onClick={() => setTab(t.key)}
-                className={`
-                  flex items-center gap-2 px-6 py-4 text-sm font-bold whitespace-nowrap border-b-2 transition-all relative
-                  ${isActive ? 'border-purple-600 text-purple-700 bg-white shadow-[0_-1px_0_0_#f8fafc]' : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100'}
-                `}
-              >
-                <Icon size={16} className={isActive ? 'text-purple-500' : ''} /> 
-                {t.label}
+              <button key={t.key} onClick={() => setTab(t.key)}
+                className={`relative flex items-center gap-2 px-5 py-4 text-sm font-bold whitespace-nowrap transition-all
+                  ${isActive ? 'text-[#E53935]' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-50'}`}>
+                <Icon size={13} />{t.label}
+                {isActive && <motion.div layoutId="fin-tab-light" className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#E53935] to-[#F06292] rounded-t-full" />}
               </button>
             );
           })}
         </div>
 
-        <div className="flex-1 p-0 bg-slate-50/30">
-          {loading && !overview.totalRevenue ? (
-            <div className="h-64 flex flex-col items-center justify-center">
-              <Loader2 className="animate-spin text-purple-500 mb-4" size={32} />
-              <p className="text-slate-500 font-medium">Syncing financial records...</p>
-            </div>
-          ) : (
-            <AnimatePresence mode="wait">
-              
-              {/* 1. Dashboard Overview */}
-              {tab === 'overview' && (
-                <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6 space-y-8 h-full">
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                    {/* Wallet Card */}
-                    <div className="md:col-span-5 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col justify-between">
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
-                      <div className="absolute bottom-0 right-0">
-                        <Wallet size={120} className="text-white/5 -mb-6 -mr-6" />
+        {loading && !overview.totalRevenue ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 size={36} className="animate-spin text-[#E53935] mb-3" />
+            <p className="text-gray-400 text-sm">Syncing financial records...</p>
+          </div>
+        ) : (
+          <AnimatePresence mode="wait">
+
+            {/* Overview */}
+            {tab === 'overview' && (
+              <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6 space-y-6">
+                {/* Wallet Hero */}
+                <div className="bg-gradient-to-br from-[#1C1033] to-[#2d1b69] rounded-2xl p-6 text-white relative overflow-hidden shadow-xl">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-[#E53935]/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+                  <div className="relative z-10">
+                    <p className="text-white/60 font-semibold text-sm flex items-center gap-2 mb-2"><Wallet size={15}/> Available Wallet Balance</p>
+                    <p className="text-5xl font-black tracking-tight">₹{(overview.walletBalance || 0).toLocaleString()}</p>
+                    <p className="text-white/40 text-xs mt-3 flex items-center gap-1"><Clock size={11}/> Next settlement on Monday, 8AM</p>
+                    <div className="mt-5 flex gap-3">
+                      <button className="bg-white text-[#1C1033] px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-100 transition-all shadow-lg">Withdraw to Bank</button>
+                      <button className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-5 py-2.5 rounded-xl text-sm font-bold transition-all">Bank Details</button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stat Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {statCards.map(s => {
+                    const Icon = s.icon;
+                    return (
+                      <div key={s.label} className={`${s.bg} border ${s.border} rounded-2xl p-5`}>
+                        <div className={`w-9 h-9 rounded-xl ${s.iconBg} flex items-center justify-center mb-3`}><Icon size={16} className={s.iconText} /></div>
+                        <p className="text-gray-500 text-xs font-bold mb-1">{s.label}</p>
+                        <p className={`text-2xl font-black ${s.text}`}>₹{s.value.toLocaleString()}</p>
                       </div>
-                      
-                      <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-slate-300 font-semibold flex items-center gap-2">
-                            <Wallet size={18} /> Available Wallet Balance
-                          </p>
-                          <span className="bg-emerald-500/20 text-emerald-400 text-xs font-bold px-2 py-1 rounded-lg border border-emerald-500/20 flex items-center gap-1">
-                            <CheckCircle size={12} /> Active
+                    );
+                  })}
+                </div>
+
+                {/* Chart */}
+                <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                  <h3 className="text-sm font-bold text-gray-800 mb-5 flex items-center gap-2"><PieChart size={15} className="text-[#E53935]" /> Revenue vs Profit Trend</h3>
+                  <div className="h-56 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={overview.chartData || []} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="rProfit" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#E53935" stopOpacity={0.15}/>
+                            <stop offset="95%" stopColor="#E53935" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} dy={8} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11 }} tickFormatter={v => `₹${v/1000}k`} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                        <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', background: '#fff', color: '#111' }} formatter={(v: any, n: any) => [`₹${v?.toLocaleString() || 0}`, n === 'profit' ? 'Net Profit' : 'Revenue']} />
+                        <Area type="monotone" dataKey="revenue" stroke="#9ca3af" strokeWidth={2} fillOpacity={0} />
+                        <Area type="monotone" dataKey="profit"  stroke="#E53935" strokeWidth={2.5} fillOpacity={1} fill="url(#rProfit)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Ledger */}
+            {tab === 'ledger' && (
+              <motion.div key="ledger" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead><tr className="bg-gray-50 border-b border-gray-100">{['Date', 'Reference', 'Amount', 'Balance After'].map(h => <th key={h} className={thCls}>{h}</th>)}</tr></thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {ledger.length === 0 ? <tr><td colSpan={4} className="text-center py-16 text-gray-400 text-sm"><Wallet size={36} className="mx-auto text-gray-200 mb-3"/>Ledger is empty.</td></tr>
+                    : ledger.map((l: any, idx) => (
+                      <tr key={l.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-5 py-4 text-sm font-medium text-gray-600">{new Date(l.createdAt).toLocaleDateString()}</td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${l.type === 'CREDIT' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                              {l.type === 'CREDIT' ? <ArrowDownRight size={13}/> : <ArrowUpRight size={13}/>}
+                            </div>
+                            <div><p className="text-sm font-bold text-gray-700 font-mono">{l.reference}</p><p className="text-xs text-gray-400">{l.description}</p></div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4"><span className={`text-sm font-black px-2.5 py-1 rounded-lg ${l.type === 'CREDIT' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{l.type === 'CREDIT' ? '+' : '-'}₹{l.amount}</span></td>
+                        <td className="px-5 py-4 text-sm font-bold text-gray-600">₹{l.balanceAfter}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </motion.div>
+            )}
+
+            {/* Escrow */}
+            {tab === 'escrow' && (
+              <motion.div key="escrow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead><tr className="bg-gray-50 border-b border-gray-100">{['Release Date', 'Order', 'Gross', 'Taxes', 'Net Payout', 'Status'].map(h => <th key={h} className={thCls}>{h}</th>)}</tr></thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {escrows.length === 0 ? <tr><td colSpan={6} className="text-center py-16 text-gray-400 text-sm"><Clock size={36} className="mx-auto text-gray-200 mb-3"/>No funds in escrow.</td></tr>
+                    : escrows.map((e: any, idx) => (
+                      <tr key={e.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-5 py-4 text-sm font-medium text-gray-600">{new Date(e.holdUntilDate).toLocaleDateString()}</td>
+                        <td className="px-5 py-4"><p className="font-bold text-gray-700 text-sm font-mono">{e.order?.orderNumber}</p></td>
+                        <td className="px-5 py-4 font-bold text-gray-700 text-sm">₹{e.grossAmount}</td>
+                        <td className="px-5 py-4 text-xs text-red-600 font-medium">TDS: ₹{e.tdsAmount}<br/>TCS: ₹{e.tcsAmount}</td>
+                        <td className="px-5 py-4"><span className="font-black px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-sm">₹{e.netPayoutAmount}</span></td>
+                        <td className="px-5 py-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${e.escrowStatus === 'RELEASED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {e.escrowStatus === 'RELEASED' ? <CheckCircle size={10}/> : <Clock size={10}/>}{e.escrowStatus}
                           </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </motion.div>
+            )}
+
+            {/* Invoices */}
+            {tab === 'invoices' && (
+              <motion.div key="invoices" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead><tr className="bg-gray-50 border-b border-gray-100">{['Invoice', 'Order', 'Amount', 'Status', 'Download'].map(h => <th key={h} className={thCls}>{h}</th>)}</tr></thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {invoices.length === 0 ? <tr><td colSpan={5} className="text-center py-16 text-gray-400 text-sm"><FileText size={36} className="mx-auto text-gray-200 mb-3"/>No invoices yet.</td></tr>
+                    : invoices.map((inv: any) => (
+                      <tr key={inv.id} className="hover:bg-gray-50 transition-colors group">
+                        <td className="px-5 py-4"><span className="font-bold text-gray-700 font-mono text-sm">{inv.invoiceNumber}</span><span className="block text-xs text-gray-400">{new Date(inv.createdAt).toLocaleDateString()}</span></td>
+                        <td className="px-5 py-4"><span className="px-2.5 py-1 bg-gray-100 border border-gray-200 rounded-lg text-xs font-bold text-gray-600">{inv.order?.orderNumber}</span></td>
+                        <td className="px-5 py-4"><p className="font-black text-gray-900 text-sm">₹{inv.amount}</p><p className="text-xs text-gray-400">Tax: ₹{inv.taxAmount}</p></td>
+                        <td className="px-5 py-4"><span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-100 text-emerald-700"><CheckCircle size={10}/> {inv.status}</span></td>
+                        <td className="px-5 py-4"><button className="opacity-0 group-hover:opacity-100 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#E53935]/10 text-[#E53935] text-xs font-bold rounded-lg transition-all hover:bg-[#E53935]/20"><Download size={12}/> PDF</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </motion.div>
+            )}
+
+            {/* Credit Notes */}
+            {tab === 'credit-notes' && (
+              <motion.div key="credit-notes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-24">
+                <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4"><CreditCard size={28} className="text-gray-300" /></div>
+                <p className="text-gray-600 font-bold">No Credit Notes</p>
+                <p className="text-gray-400 text-sm mt-1">Any credit notes for refunds or adjustments will appear here.</p>
+              </motion.div>
+            )}
+
+            {/* Taxes */}
+            {tab === 'taxes' && (
+              <motion.div key="taxes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-emerald-50 border border-emerald-200 p-5 rounded-2xl mb-6">
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2 mb-1"><ShieldCheck size={16} className="text-emerald-600"/> GST Monthly Filing Reports</h3>
+                    <p className="text-xs text-gray-500">Download data formatted for GSTR-1 and GSTR-3B portal filings.</p>
+                  </div>
+                  <button className="mt-3 sm:mt-0 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-emerald-400/25 transition-all active:scale-95"><Download size={14}/> Export All</button>
+                </div>
+                {taxes.length === 0 ? (
+                  <div className="text-center py-12 border border-dashed border-gray-200 rounded-2xl"><p className="text-gray-400 text-sm">No tax reports generated yet.</p></div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {taxes.map((t: any, i: number) => (
+                      <div key={i} className="bg-white border border-gray-200 hover:border-emerald-300 hover:shadow-md rounded-2xl p-5 transition-all group">
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="font-black text-gray-900 text-lg">{t.month}</h4>
+                          <button className="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 p-2 rounded-xl transition-colors"><Download size={15}/></button>
                         </div>
-                        <p className="text-5xl font-black tracking-tight my-4">₹{(overview.walletBalance || 0).toLocaleString()}</p>
-                        <p className="text-sm text-slate-400 flex items-center gap-1">
-                          <Clock size={14} /> Next settlement on Monday, 8AM
-                        </p>
-                      </div>
-                      
-                      <div className="relative z-10 mt-8 grid grid-cols-2 gap-3">
-                        <button className="bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold py-3 rounded-xl transition-all shadow-lg shadow-purple-900/50 hover:-translate-y-0.5">
-                          Withdraw to Bank
-                        </button>
-                        <button className="bg-white/10 hover:bg-white/20 text-white border border-white/10 text-sm font-bold py-3 rounded-xl transition-all">
-                          View Bank Details
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Quick Stats Grid */}
-                    <div className="md:col-span-7 grid grid-cols-2 gap-4">
-                      <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden group">
-                        <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-colors" />
-                        <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3">
-                          <ArrowUpRight size={20} strokeWidth={2.5} />
+                        <div className="space-y-2 text-sm">
+                          {[['Total Sales', t.totalSales], ['CGST', t.cgst], ['SGST', t.sgst], ['IGST', t.igst]].map(([l, v]) => (
+                            <div key={l as string} className="flex justify-between"><span className="text-gray-400 font-medium">{l as string}</span><span className="font-bold text-gray-700">₹{(v as number).toLocaleString()}</span></div>
+                          ))}
                         </div>
-                        <p className="text-slate-500 text-sm font-semibold mb-1">Gross Revenue</p>
-                        <p className="text-2xl font-black text-slate-900">₹{(overview.totalRevenue || 0).toLocaleString()}</p>
-                      </div>
-                      
-                      <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden group">
-                        <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-red-500/5 rounded-full blur-2xl group-hover:bg-red-500/10 transition-colors" />
-                        <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center mb-3">
-                          <ArrowDownRight size={20} strokeWidth={2.5} />
+                        <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
+                          <span className="text-sm font-bold text-gray-600">Total Tax</span>
+                          <span className="font-black text-emerald-700 text-lg">₹{(t.cgst + t.sgst + t.igst).toLocaleString()}</span>
                         </div>
-                        <p className="text-slate-500 text-sm font-semibold mb-1">Platform Fees Deducted</p>
-                        <p className="text-2xl font-black text-slate-900">₹{(overview.platformFees || 0).toLocaleString()}</p>
                       </div>
-
-                      <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden group col-span-2 sm:col-span-1">
-                        <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition-colors" />
-                        <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center mb-3">
-                          <Clock size={20} strokeWidth={2.5} />
-                        </div>
-                        <p className="text-slate-500 text-sm font-semibold mb-1">Pending Settlements</p>
-                        <p className="text-2xl font-black text-slate-900">₹{(overview.totalPending || 0).toLocaleString()}</p>
-                      </div>
-
-                      <div className="bg-purple-50 rounded-2xl p-5 border border-purple-100 shadow-sm relative overflow-hidden group col-span-2 sm:col-span-1 flex flex-col justify-center">
-                        <div className="absolute -right-6 -top-6 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-                        <p className="text-purple-600 text-sm font-bold mb-1 flex items-center gap-2">
-                          <PieChart size={16} /> Net Profit Realized
-                        </p>
-                        <p className="text-3xl font-black text-purple-900 mt-1">₹{(overview.netProfit || 0).toLocaleString()}</p>
-                        <p className="text-xs text-purple-700/70 font-semibold mt-2">Revenue minus fees & taxes.</p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
+                )}
+              </motion.div>
+            )}
 
-                  {/* Chart Area */}
-                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <PieChart size={20} className="text-purple-500" /> Profit & Revenue Trend
-                      </h3>
-                      <div className="flex items-center gap-4 text-sm font-semibold">
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-purple-500"></div> Net Profit</div>
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-slate-300"></div> Gross Revenue</div>
-                      </div>
-                    </div>
-                    <div className="h-64 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={overview.chartData || []} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
-                          <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} tickFormatter={(value) => `₹${value/1000}k`} />
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                          <Tooltip 
-                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                            formatter={(value: any, name: any) => [`₹${value?.toLocaleString() || 0}`, name === 'profit' ? 'Net Profit' : 'Gross Revenue']}
-                          />
-                          <Area type="monotone" dataKey="revenue" stroke="#cbd5e1" strokeWidth={2} fillOpacity={0} />
-                          <Area type="monotone" dataKey="profit" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorProfit)" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-
-                </motion.div>
-              )}
-
-              {/* 2. Wallet Ledger */}
-              {tab === 'ledger' && (
-                <motion.div key="ledger" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full bg-white">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-slate-50/80 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                          <th className="px-6 py-4">Transaction Date</th>
-                          <th className="px-6 py-4">Reference & Details</th>
-                          <th className="px-6 py-4 text-right">Amount</th>
-                          <th className="px-6 py-4 text-right">Balance After</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {ledger.length === 0 ? (
-                          <tr>
-                            <td colSpan={4} className="text-center py-16">
-                              <Wallet size={48} className="mx-auto text-slate-300 mb-4" />
-                              <h3 className="text-lg font-bold text-slate-900 mb-1">No transactions yet</h3>
-                              <p className="text-slate-500 text-sm">Your wallet ledger is currently empty.</p>
-                            </td>
-                          </tr>
-                        ) : ledger.map((l: any, idx) => (
-                          <motion.tr 
-                            key={l.id} 
-                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
-                            className="hover:bg-slate-50/50 transition-colors"
-                          >
-                            <td className="px-6 py-4">
-                              <div className="flex flex-col">
-                                <span className="text-sm font-bold text-slate-900">{new Date(l.createdAt).toLocaleDateString()}</span>
-                                <span className="text-xs text-slate-500">{new Date(l.createdAt).toLocaleTimeString()}</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${l.type === 'CREDIT' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
-                                  {l.type === 'CREDIT' ? <ArrowDownRight size={16} /> : <ArrowUpRight size={16} />}
-                                </div>
-                                <div>
-                                  <p className="text-sm font-bold text-slate-900 font-mono">{l.reference}</p>
-                                  <p className="text-xs font-medium text-slate-500 mt-0.5">{l.description}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                              <span className={`text-base font-black px-3 py-1 rounded-lg ${l.type === 'CREDIT' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
-                                {l.type === 'CREDIT' ? '+' : '-'}₹{l.amount}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                              <span className="text-sm font-bold text-slate-700">₹{l.balanceAfter}</span>
-                            </td>
-                          </motion.tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* 3. Invoices */}
-              {tab === 'invoices' && (
-                <motion.div key="invoices" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full bg-white">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-slate-50/80 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                          <th className="px-6 py-4">Invoice Details</th>
-                          <th className="px-6 py-4">Order Ref</th>
-                          <th className="px-6 py-4">Amount & Tax</th>
-                          <th className="px-6 py-4">Status</th>
-                          <th className="px-6 py-4 text-right">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {invoices.length === 0 ? (
-                          <tr>
-                            <td colSpan={5} className="text-center py-16">
-                              <FileText size={48} className="mx-auto text-slate-300 mb-4" />
-                              <h3 className="text-lg font-bold text-slate-900 mb-1">No invoices found</h3>
-                              <p className="text-slate-500 text-sm">Invoices will appear here once orders are fulfilled.</p>
-                            </td>
-                          </tr>
-                        ) : invoices.map((inv: any, idx) => (
-                          <motion.tr 
-                            key={inv.id}
-                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
-                            className="hover:bg-slate-50/50 transition-colors group"
-                          >
-                            <td className="px-6 py-4">
-                              <div className="flex flex-col">
-                                <span className="text-sm font-bold text-slate-900 font-mono">{inv.invoiceNumber}</span>
-                                <span className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Clock size={12}/> {new Date(inv.createdAt).toLocaleDateString()}</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className="inline-flex px-2.5 py-1 bg-slate-100 border border-slate-200 rounded-lg text-xs font-bold text-slate-700">
-                                {inv.order?.orderNumber}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <p className="text-sm font-black text-slate-900">₹{inv.amount}</p>
-                              <p className="text-xs font-semibold text-slate-400">Incl. ₹{inv.taxAmount} Tax</p>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black border bg-emerald-50 text-emerald-700 border-emerald-200">
-                                <CheckCircle size={12}/> {inv.status}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                              <button className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold rounded-lg transition-colors border border-purple-200 opacity-0 group-hover:opacity-100">
-                                <Download size={14}/> PDF
-                              </button>
-                            </td>
-                          </motion.tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* 4. Credit Notes */}
-              {tab === 'credit-notes' && (
-                <motion.div key="credit-notes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex flex-col items-center justify-center py-24 text-center">
-                  <div className="w-20 h-20 bg-slate-100 rounded-[2rem] flex items-center justify-center mb-6 border border-slate-200 shadow-inner">
-                    <CreditCard size={32} className="text-slate-400" />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">No Credit Notes</h3>
-                  <p className="text-slate-500 text-sm max-w-md mx-auto">
-                    Any credit notes issued for refunds or adjustments will appear here.
-                  </p>
-                </motion.div>
-              )}
-
-              {/* 5. Tax & GST Reports */}
-              {tab === 'taxes' && (
-                <motion.div key="taxes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6 h-full">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between bg-gradient-to-r from-slate-900 to-slate-800 p-6 rounded-2xl shadow-lg mb-8 text-white">
-                    <div>
-                      <h3 className="text-xl font-bold flex items-center gap-2">
-                        <ShieldCheck size={24} className="text-emerald-400" /> GST Monthly Filing Reports
-                      </h3>
-                      <p className="text-sm text-slate-400 mt-2 max-w-lg">
-                        Download your aggregated sales data formatted specifically for GSTR-1 and GSTR-3B portal filings.
-                      </p>
-                    </div>
-                    <button className="mt-4 md:mt-0 bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 flex items-center gap-2">
-                      <Download size={16}/> Export All Reports
-                    </button>
-                  </div>
-                  
-                  {taxes.length === 0 ? (
-                    <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-2xl">
-                      <p className="text-slate-500 font-medium">No tax reports generated yet.</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                      {taxes.map((t: any, i: number) => (
-                        <motion.div 
-                          initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}
-                          key={i} 
-                          className="border border-slate-200 p-6 rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden"
-                        >
-                          <div className="absolute -right-10 -top-10 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-colors pointer-events-none" />
-                          
-                          <div className="flex justify-between items-center mb-6">
-                            <h4 className="font-black text-slate-900 text-xl">{t.month}</h4>
-                            <button className="text-emerald-600 bg-emerald-50 hover:bg-emerald-100 p-2 rounded-xl transition-colors border border-emerald-100">
-                              <Download size={18}/>
-                            </button>
-                          </div>
-                          
-                          <div className="space-y-3 text-sm">
-                            <div className="flex justify-between items-center p-2 rounded-lg bg-slate-50">
-                              <span className="text-slate-500 font-semibold">Total Sales</span> 
-                              <span className="font-black text-slate-900">₹{t.totalSales.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between items-center p-2">
-                              <span className="text-slate-500">CGST Collected</span> 
-                              <span className="font-semibold text-slate-700">₹{t.cgst.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
-                              <span className="text-slate-500">SGST Collected</span> 
-                              <span className="font-semibold text-slate-700">₹{t.sgst.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between items-center p-2">
-                              <span className="text-slate-500">IGST Collected</span> 
-                              <span className="font-semibold text-slate-700">₹{t.igst.toLocaleString()}</span>
-                            </div>
-                          </div>
-                          
-                          <div className="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center">
-                            <span className="font-bold text-slate-900">Total Tax Payable</span>
-                            <span className="font-black text-emerald-600 text-xl">₹{(t.cgst + t.sgst + t.igst).toLocaleString()}</span>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              )}
-
-            </AnimatePresence>
-          )}
-        </div>
+          </AnimatePresence>
+        )}
       </motion.div>
     </motion.div>
   );
 }
-// Required dummy import for Target to resolve from lucide-react used in earlier versions (added to suppress potential errors if missing)
-import { Target } from 'lucide-react';

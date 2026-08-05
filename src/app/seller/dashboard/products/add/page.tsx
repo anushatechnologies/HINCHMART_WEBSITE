@@ -1,214 +1,186 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft, Package, ChevronRight, Loader2, CheckCircle
-} from 'lucide-react';
+import { WizardProvider, useWizard } from './WizardContext';
+import { ArrowLeft, CheckCircle, Save, Send, ChevronRight } from 'lucide-react';
 
-const STEPS = ['Basic Info', 'Pricing & Stock', 'Details'];
+import Step1Category from './components/Step1Category';
+import Step2ProductType from './components/Step2ProductType';
+import Step3BasicInfo from './components/Step3BasicInfo';
+import Step4Images from './components/Step4Images';
+import Step5Specifications from './components/Step5Specifications';
+import Step6RentalDetails from './components/Step6RentalDetails';
+import Step7AvailabilityCalendar from './components/Step7AvailabilityCalendar';
+import Step8RentalPricing from './components/Step8RentalPricing';
+import Step9DepositPenalties from './components/Step9DepositPenalties';
+import Step10DeliveryPickup from './components/Step10DeliveryPickup';
+import Step11OperatorDetails from './components/Step11OperatorDetails';
+import Step14Inventory from './components/Step14Inventory';
+import Step16Review from './components/Step16Review';
 
-export default function AddProduct() {
+const STEPS = [
+  'Category', 'Product Type', 'Basic Information', 'Images & Media',
+  'Specifications', 'Rental Details', 'Availability Calendar', 'Rental Pricing', 
+  'Deposit & Penalties', 'Delivery & Pickup', 'Operator Details', 'Variants',
+  'Pricing', 'Inventory', 'SEO', 'Review & Submit'
+];
+
+function WizardShell() {
   const router = useRouter();
-  const [step, setStep] = useState(0);
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [vendorId, setVendorId] = useState<number | null>(null);
-  const [categories, setCategories] = useState<any[]>([]);
+  const { 
+    currentStep, setCurrentStep, productType, 
+    completedSteps, saveDraft, isSaving, markStepComplete
+  } = useWizard();
 
-  const [form, setForm] = useState({
-    name: '', brand: '', categoryId: '', description: '',
-    basePrice: '', mrp: '', gstPercent: '18', moq: '1',
-    stockQty: '0', stockStatus: 'IN_STOCK',
-    barcode: '', modelNumber: '', hsnCode: '', countryOfOrigin: '', warranty: '',
+  // Filter steps based on product type
+  const activeSteps = STEPS.filter(step => {
+    if (productType !== 'RENTAL' && [
+      'Rental Details', 'Availability Calendar', 'Rental Pricing', 
+      'Deposit & Penalties', 'Operator Details'
+    ].includes(step)) return false;
+    
+    // For Rentals, hide standard Variants/Pricing for now (based on plan)
+    if (productType === 'RENTAL' && ['Variants', 'Pricing'].includes(step)) return false;
+
+    return true;
   });
 
-  useEffect(() => {
-    const info = localStorage.getItem('seller_info');
-    if (info) setVendorId(JSON.parse(info).id);
-    fetch('http://localhost:5000/api/categories')
-      .then(r => r.json())
-      .then(d => { if (d.data) setCategories(d.data); });
-  }, []);
+  const currentStepName = activeSteps[currentStep - 1];
 
-  const set = (field: string, val: string) => setForm(prev => ({ ...prev, [field]: val }));
-
-  const canNext = () => {
-    if (step === 0) return form.name.trim() && form.categoryId;
-    if (step === 1) return form.basePrice && form.mrp && Number(form.basePrice) <= Number(form.mrp);
-    return true;
-  };
-
-  const handleSubmit = async () => {
-    if (!vendorId) return;
-    setSaving(true);
-    try {
-      const res = await fetch('http://localhost:5000/api/vendors/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, vendorId })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSuccess(true);
-        setTimeout(() => router.push(`/seller/dashboard/products/${data.data.id}/edit`), 1500);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSaving(false);
+  const handleNext = async () => {
+    markStepComplete(currentStep);
+    await saveDraft();
+    if (currentStep < activeSteps.length) {
+      setCurrentStep(s => s + 1);
     }
   };
 
-  if (success) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
-          <CheckCircle size={36} className="text-emerald-600" />
-        </div>
-        <h2 className="text-xl font-bold text-slate-900">Product Created!</h2>
-        <p className="text-slate-500 text-sm">Redirecting to editor...</p>
-      </div>
-    );
-  }
+  const handlePrev = () => {
+    if (currentStep > 1) {
+      setCurrentStep(s => s - 1);
+    } else {
+      router.back();
+    }
+  };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
-        <button onClick={() => router.back()} className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
-          <ArrowLeft size={18} className="text-slate-600" />
-        </button>
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Add New Product</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Fill in the details to list your product</p>
+    <div className="max-w-6xl mx-auto flex flex-col h-[calc(100vh-8rem)]">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div className="flex items-center gap-4">
+          <button onClick={() => router.back()} className="p-2 hover:bg-slate-100 rounded-lg">
+            <ArrowLeft size={20} className="text-slate-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Add New Product</h1>
+            <p className="text-slate-500 text-sm">Step {currentStep} of {activeSteps.length}: {currentStepName}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={saveDraft}
+            className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 font-medium text-sm"
+          >
+            {isSaving ? <span className="animate-spin text-xl leading-none">⟳</span> : <Save size={16} />}
+            Save Draft
+          </button>
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        {STEPS.map((s, i) => (
-          <div key={s} className="flex items-center gap-2">
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${i === step ? 'bg-red-600 text-white' : i < step ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-              {i < step ? <CheckCircle size={12} /> : <span>{i + 1}</span>}
-              {s}
-            </div>
-            {i < STEPS.length - 1 && <ChevronRight size={14} className="text-slate-300" />}
+      <div className="flex flex-1 overflow-hidden mt-6 gap-8">
+        {/* Sidebar Navigation */}
+        <div className="w-64 shrink-0 overflow-y-auto pr-2 custom-scrollbar">
+          <div className="space-y-1">
+            {activeSteps.map((stepName, idx) => {
+              const stepNum = idx + 1;
+              const isCurrent = stepNum === currentStep;
+              const isCompleted = completedSteps.includes(stepNum);
+              
+              return (
+                <button
+                  key={stepName}
+                  onClick={() => setCurrentStep(stepNum)}
+                  className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
+                    isCurrent ? 'bg-red-50 border border-red-100' : 'hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      isCompleted ? 'bg-emerald-500 text-white' : 
+                      isCurrent ? 'bg-red-600 text-white' : 'bg-slate-200 text-slate-500'
+                    }`}>
+                      {isCompleted ? <CheckCircle size={14} /> : stepNum}
+                    </div>
+                    <span className={`text-sm font-medium ${isCurrent ? 'text-red-700' : 'text-slate-700'}`}>
+                      {stepName}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        ))}
-      </div>
+        </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
-        {step === 0 && (
-          <>
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2"><Package size={18} className="text-red-500" /> Basic Information</h2>
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Product Name <span className="text-red-500">*</span></label>
-                <input value={form.name} onChange={e => set('name', e.target.value)}
-                  placeholder="e.g. Bosch Angle Grinder 7 inch"
-                  className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                />
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            {currentStepName === 'Category' && <Step1Category />}
+            {currentStepName === 'Product Type' && <Step2ProductType />}
+            {currentStepName === 'Basic Information' && <Step3BasicInfo />}
+            {currentStepName === 'Images & Media' && <Step4Images />}
+            {currentStepName === 'Specifications' && <Step5Specifications />}
+            {currentStepName === 'Rental Details' && <Step6RentalDetails />}
+            {currentStepName === 'Availability Calendar' && <Step7AvailabilityCalendar />}
+            {currentStepName === 'Rental Pricing' && <Step8RentalPricing />}
+            {currentStepName === 'Deposit & Penalties' && <Step9DepositPenalties />}
+            {currentStepName === 'Delivery & Pickup' && <Step10DeliveryPickup />}
+            {currentStepName === 'Operator Details' && <Step11OperatorDetails />}
+            {currentStepName === 'Inventory' && <Step14Inventory />}
+            {currentStepName === 'Review & Submit' && <Step16Review />}
+            
+            {![
+              'Category', 'Product Type', 'Basic Information', 'Images & Media', 
+              'Specifications', 'Rental Details', 'Availability Calendar', 'Rental Pricing',
+              'Deposit & Penalties', 'Delivery & Pickup', 'Operator Details',
+              'Inventory', 'Review & Submit'
+            ].includes(currentStepName) && (
+              <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                <p>Placeholder for <strong>{currentStepName}</strong> step.</p>
+                <p className="text-sm mt-2">Implementation of individual steps happens in subsequent phases.</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Brand</label>
-                  <input value={form.brand} onChange={e => set('brand', e.target.value)}
-                    placeholder="e.g. Bosch"
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Category <span className="text-red-500">*</span></label>
-                  <select value={form.categoryId} onChange={e => set('categoryId', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white">
-                    <option value="">Select category</option>
-                    {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Description</label>
-                <textarea value={form.description} onChange={e => set('description', e.target.value)}
-                  rows={4} placeholder="Describe your product..."
-                  className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
-                />
-              </div>
-            </div>
-          </>
-        )}
-        {step === 1 && (
-          <>
-            <h2 className="text-base font-bold text-slate-900">Pricing & Stock</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { label: 'Selling Price (₹)', field: 'basePrice', required: true },
-                { label: 'MRP (₹)', field: 'mrp', required: true },
-                { label: 'GST %', field: 'gstPercent', required: false },
-                { label: 'Min Order Qty', field: 'moq', required: false },
-                { label: 'Initial Stock Qty', field: 'stockQty', required: false },
-              ].map(f => (
-                <div key={f.field}>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">{f.label} {f.required && <span className="text-red-500">*</span>}</label>
-                  <input type="number" value={(form as any)[f.field]} onChange={e => set(f.field, e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                  />
-                </div>
-              ))}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Stock Status</label>
-                <select value={form.stockStatus} onChange={e => set('stockStatus', e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white">
-                  <option value="IN_STOCK">In Stock</option>
-                  <option value="LOW_STOCK">Low Stock</option>
-                  <option value="OUT_OF_STOCK">Out of Stock</option>
-                </select>
-              </div>
-            </div>
-            {form.basePrice && form.mrp && Number(form.basePrice) > Number(form.mrp) && (
-              <p className="text-xs text-red-600 font-medium">⚠ Selling price cannot be higher than MRP</p>
             )}
-          </>
-        )}
-        {step === 2 && (
-          <>
-            <h2 className="text-base font-bold text-slate-900">Product Details</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { label: 'Barcode / EAN', field: 'barcode' },
-                { label: 'Model Number', field: 'modelNumber' },
-                { label: 'HSN Code', field: 'hsnCode' },
-                { label: 'Country of Origin', field: 'countryOfOrigin' },
-                { label: 'Warranty', field: 'warranty' },
-              ].map(f => (
-                <div key={f.field}>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">{f.label}</label>
-                  <input value={(form as any)[f.field]} onChange={e => set(f.field, e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                  />
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+          </div>
 
-      <div className="flex items-center justify-between">
-        <button onClick={() => step === 0 ? router.back() : setStep(s => s - 1)}
-          className="px-5 py-2.5 border border-slate-300 rounded-lg text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors">
-          {step === 0 ? 'Cancel' : 'Back'}
-        </button>
-        {step < STEPS.length - 1 ? (
-          <button onClick={() => setStep(s => s + 1)} disabled={!canNext()}
-            className="px-6 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2">
-            Next <ChevronRight size={16} />
-          </button>
-        ) : (
-          <button onClick={handleSubmit} disabled={saving}
-            className="px-6 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center gap-2">
-            {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-            {saving ? 'Creating...' : 'Create Product'}
-          </button>
-        )}
+          {/* Footer Controls */}
+          <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+            <button 
+              onClick={handlePrev}
+              className="px-6 py-2.5 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-white"
+            >
+              {currentStep === 1 ? 'Cancel' : 'Previous'}
+            </button>
+            <button 
+              onClick={handleNext}
+              className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium flex items-center gap-2"
+            >
+              {currentStep === activeSteps.length ? (
+                <>Submit for Approval <Send size={16} /></>
+              ) : (
+                <>Save & Continue <ChevronRight size={16} /></>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
+  );
+}
+
+export default function AddProductPage() {
+  return (
+    <WizardProvider>
+      <WizardShell />
+    </WizardProvider>
   );
 }

@@ -1,8 +1,9 @@
 'use client';
+
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gift, TrendingUp, ShoppingBag, Crown, Zap, Sparkles, Medal, History } from 'lucide-react';
+import { Gift, TrendingUp, ShoppingBag, Crown, Zap, Sparkles, Medal, History as HistoryIcon } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -26,8 +27,11 @@ export default function RewardsPage() {
         const token = localStorage.getItem('token');
         if (!token) return;
         const res = await fetch(`${API}/api/rewards`, { headers: { Authorization: `Bearer ${token}` } });
-        const data = await res.json();
-        if (data.success && data.data) setRewards(data.data);
+        const ct = res.headers.get('content-type');
+        if (res.ok && ct && ct.includes('application/json')) {
+          const data = await res.json();
+          if (data.success && data.data) setRewards(data.data);
+        }
       } catch (e) { 
         console.error(e); 
       }
@@ -58,133 +62,148 @@ export default function RewardsPage() {
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/20 rounded-full blur-2xl"></div>
             <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-black/5 rounded-full blur-2xl"></div>
             
-            <div className="relative z-10">
-              <motion.div 
-                animate={{ rotate: [0, 5, -5, 0] }} 
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="text-6xl mb-4 drop-shadow-lg"
-              >
-                {currentTier.icon}
-              </motion.div>
-              
-              <div className="inline-flex items-center gap-1.5 bg-white/40 backdrop-blur-sm px-4 py-1.5 rounded-full mb-3 shadow-sm border border-white/50">
-                <Medal size={14} className={currentTier.color} />
-                <span className={`text-[10px] font-black uppercase tracking-widest ${currentTier.color}`}>{currentTier.name} VIP</span>
-              </div>
-              
-              <p className="text-5xl font-black text-slate-900 mb-1 tracking-tighter drop-shadow-sm">
-                {loading ? '...' : rewards.balance.toLocaleString()}
-              </p>
-              <p className="text-xs text-slate-600 font-black uppercase tracking-widest mb-8">Available Points</p>
-              
-              <div className="bg-white/80 backdrop-blur-md rounded-2xl p-5 shadow-sm border border-white/60 flex items-center justify-between group cursor-pointer hover:bg-white transition-colors">
-                <div className="text-left">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Store Credit Value</p>
-                  <p className="text-2xl font-black text-emerald-600 tracking-tight group-hover:scale-105 transition-transform origin-left">₹{rewards.walletValue}</p>
-                </div>
-                <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-500 shadow-inner group-hover:rotate-12 transition-transform">
-                  <Sparkles size={20} />
-                </div>
-              </div>
+            <div className="text-6xl mb-4 transform hover:scale-110 transition-transform duration-300 inline-block">
+              {currentTier.icon}
             </div>
+
+            <span className="text-[11px] font-black tracking-widest uppercase text-slate-500 bg-white/60 px-3 py-1 rounded-full border border-white/40 shadow-sm mb-2 inline-block">
+              Current Tier
+            </span>
+
+            <h2 className={`text-3xl font-black ${currentTier.color} mb-6 tracking-tight flex items-center justify-center gap-2`}>
+              {currentTier.name} Member
+            </h2>
+
+            {nextTier ? (
+              <div className="bg-white/70 backdrop-blur-md rounded-2xl p-4 border border-white/60 shadow-sm">
+                <div className="flex justify-between items-center text-xs font-bold text-slate-600 mb-2">
+                  <span>Progress to {nextTier.name}</span>
+                  <span>{rewards.totalEarned} / {nextTier.min} pts</span>
+                </div>
+                <div className="w-full bg-slate-200/80 rounded-full h-3 overflow-hidden p-0.5 border border-slate-300/50">
+                  <div 
+                    className="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full transition-all duration-1000 shadow-sm"
+                    style={{ width: `${progressToNext}%` }}
+                  ></div>
+                </div>
+                <p className="text-[11px] text-slate-500 font-medium mt-2">
+                  Earn <span className="font-bold text-slate-700">{(nextTier.min - rewards.totalEarned).toLocaleString()} more points</span> to unlock {nextTier.name} perks!
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white/80 backdrop-blur-md rounded-2xl p-4 border border-white/60 shadow-sm">
+                <p className="text-xs font-bold text-emerald-600 flex items-center justify-center gap-1">
+                  <Crown size={14} /> You have achieved the highest tier!
+                </p>
+              </div>
+            )}
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="lg:col-span-2 space-y-6">
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 sm:p-8 flex items-center gap-5 group hover:border-blue-200 transition-colors">
-              <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0 border border-blue-100 group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
-                <TrendingUp size={24} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Lifetime Earned</p>
-                <p className="text-3xl font-black text-slate-900 tracking-tight">{rewards.totalEarned.toLocaleString()} <span className="text-lg text-slate-400 font-bold">pts</span></p>
-              </div>
-            </div>
+        {/* Balance & Stats Cards */}
+        <motion.div variants={itemVariants} className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+          
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden flex flex-col justify-between group">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-orange-500/10 rounded-full blur-3xl group-hover:bg-orange-500/20 transition-colors"></div>
             
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 sm:p-8 flex items-center gap-5 group hover:border-rose-200 transition-colors">
-              <div className="w-14 h-14 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center shrink-0 border border-rose-100 group-hover:scale-110 group-hover:bg-rose-500 group-hover:text-white transition-all shadow-sm">
-                <ShoppingBag size={24} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Redeemed</p>
-                <p className="text-3xl font-black text-slate-900 tracking-tight">{rewards.totalRedeemed.toLocaleString()} <span className="text-lg text-slate-400 font-bold">pts</span></p>
-              </div>
-            </div>
-          </div>
-
-          {/* Tier Progress Indicator */}
-          {nextTier && (
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 sm:p-8">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+            <div>
+              <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="font-extrabold text-slate-900 flex items-center gap-2 text-lg">
-                    <Crown size={20} className="text-yellow-500" /> Unlock {nextTier.name} Status
-                  </h3>
-                  <p className="text-sm text-slate-500 font-medium mt-1">
-                    Earn <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md mx-1">{(nextTier.min - rewards.totalEarned).toLocaleString()}</span> more points to upgrade your VIP tier.
-                  </p>
+                  <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-1">Available Balance</p>
+                  <h3 className="text-4xl sm:text-5xl font-black tracking-tight text-white">{rewards.balance.toLocaleString()}</h3>
                 </div>
-                <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center text-2xl shrink-0 shadow-sm">
-                  {nextTier.icon}
+                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 text-orange-400">
+                  <Crown size={24} />
                 </div>
               </div>
-              
-              <div className="relative pt-2">
-                <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden border border-slate-200 shadow-inner">
-                  <motion.div 
-                    initial={{ width: 0 }} 
-                    animate={{ width: `${progressToNext}%` }} 
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                    className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 shadow-sm relative overflow-hidden" 
-                  >
-                    <div className="absolute inset-0 bg-white/20 w-full h-full animate-[shimmer_2s_infinite]" style={{ backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)', backgroundSize: '200% 100%' }}></div>
-                  </motion.div>
-                </div>
-                
-                <div className="flex justify-between mt-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  <span className={currentTier.color}>{currentTier.name}: {currentTier.min.toLocaleString()}</span>
-                  <span className={nextTier.color}>{nextTier.name}: {nextTier.min.toLocaleString()}</span>
-                </div>
-              </div>
+              <p className="text-slate-400 text-xs font-medium flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 w-fit">
+                <Zap size={13} className="text-orange-400" /> Equivalent to <span className="font-bold text-white">₹{rewards.walletValue}</span> in store credit
+              </p>
             </div>
-          )}
 
-          {/* Quick Earn Guide */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 sm:p-8">
-            <h3 className="font-extrabold text-slate-900 mb-6 flex items-center gap-2 text-lg tracking-tight">
-              <Zap size={20} className="text-orange-500" /> Fast Track Your Points
-            </h3>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 flex flex-col justify-center items-center text-center group hover:bg-blue-600 hover:text-white transition-colors">
-                <ShoppingBag size={24} className="text-blue-500 mb-3 group-hover:text-blue-200 transition-colors" />
-                <span className="font-bold text-sm mb-1">Shopping</span>
-                <span className="font-black text-blue-600 group-hover:text-white bg-white/60 group-hover:bg-white/20 px-3 py-1 rounded-full text-xs">1 pt / ₹1</span>
-              </div>
-              
-              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex flex-col justify-center items-center text-center group hover:bg-emerald-600 hover:text-white transition-colors">
-                <Sparkles size={24} className="text-emerald-500 mb-3 group-hover:text-emerald-200 transition-colors" />
-                <span className="font-bold text-sm mb-1">Reviews</span>
-                <span className="font-black text-emerald-600 group-hover:text-white bg-white/60 group-hover:bg-white/20 px-3 py-1 rounded-full text-xs">50 pts / Item</span>
-              </div>
-              
-              <div className="p-4 rounded-2xl bg-purple-50 border border-purple-100 flex flex-col justify-center items-center text-center group hover:bg-purple-600 hover:text-white transition-colors">
-                <Gift size={24} className="text-purple-500 mb-3 group-hover:text-purple-200 transition-colors" />
-                <span className="font-bold text-sm mb-1">Referrals</span>
-                <span className="font-black text-purple-600 group-hover:text-white bg-white/60 group-hover:bg-white/20 px-3 py-1 rounded-full text-xs">200 pts / Friend</span>
-              </div>
+            <div className="mt-8 pt-6 border-t border-white/10 flex justify-between items-center">
+              <span className="text-xs text-slate-400 font-semibold">100 Points = ₹10 Credit</span>
+              <Link 
+                href="/search" 
+                className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-orange-500/20 hover:scale-105 active:scale-95"
+              >
+                Use Points
+              </Link>
             </div>
           </div>
+
+          <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm flex flex-col justify-between">
+            <div>
+              <h3 className="font-bold text-slate-900 text-base mb-6 flex items-center gap-2">
+                <Sparkles className="text-amber-500" size={18} /> Points Activity Summary
+              </h3>
+              
+              <div className="space-y-5">
+                <div className="flex justify-between items-center p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+                      <TrendingUp size={18} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 font-semibold">Lifetime Earned</p>
+                      <p className="text-lg font-black text-slate-900">+{rewards.totalEarned.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
+                      <ShoppingBag size={18} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 font-semibold">Total Redeemed</p>
+                      <p className="text-lg font-black text-slate-900">-{rewards.totalRedeemed.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-slate-100">
+              <p className="text-[11px] text-slate-400 font-medium">Points expire 12 months after date of issuance.</p>
+            </div>
+          </div>
+
         </motion.div>
       </div>
+
+      {/* How to Earn Points Cards */}
+      <motion.div variants={itemVariants} className="mb-10">
+        <h2 className="text-xl font-extrabold text-slate-900 mb-4 tracking-tight flex items-center gap-2">
+          <Medal className="text-amber-500" size={20} /> Ways to Earn Points
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-5 rounded-2xl bg-blue-50 border border-blue-100 flex flex-col justify-center items-center text-center group hover:bg-blue-600 hover:text-white transition-colors">
+            <ShoppingBag size={24} className="text-blue-500 mb-3 group-hover:text-blue-200 transition-colors" />
+            <span className="font-bold text-sm mb-1">Make a Purchase</span>
+            <span className="font-black text-blue-600 group-hover:text-white bg-white/60 group-hover:bg-white/20 px-3 py-1 rounded-full text-xs">10 pts / ₹100 Spent</span>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-100 flex flex-col justify-center items-center text-center group hover:bg-emerald-600 hover:text-white transition-colors">
+            <Sparkles size={24} className="text-emerald-500 mb-3 group-hover:text-emerald-200 transition-colors" />
+            <span className="font-bold text-sm mb-1">Product Reviews</span>
+            <span className="font-black text-emerald-600 group-hover:text-white bg-white/60 group-hover:bg-white/20 px-3 py-1 rounded-full text-xs">50 pts / Item</span>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-purple-50 border border-purple-100 flex flex-col justify-center items-center text-center group hover:bg-purple-600 hover:text-white transition-colors">
+            <Gift size={24} className="text-purple-500 mb-3 group-hover:text-purple-200 transition-colors" />
+            <span className="font-bold text-sm mb-1">Referrals</span>
+            <span className="font-black text-purple-600 group-hover:text-white bg-white/60 group-hover:bg-white/20 px-3 py-1 rounded-full text-xs">200 pts / Friend</span>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Points History Ledger */}
       <motion.div variants={itemVariants} className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden min-h-[400px] flex flex-col relative">
         <div className="p-6 sm:p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
           <h3 className="font-black text-slate-900 text-lg flex items-center gap-2">
-            <History className="text-blue-500" size={20} /> Rewards Ledger
+            <HistoryIcon className="text-blue-500" size={20} /> Rewards Ledger
           </h3>
         </div>
         
@@ -194,7 +213,7 @@ export default function RewardsPage() {
               <div className="w-12 h-12 border-4 border-slate-100 border-t-orange-500 rounded-full animate-spin mb-4"></div>
               <p className="text-slate-400 font-bold tracking-widest uppercase text-xs">Syncing Rewards...</p>
             </div>
-          ) : rewards.history.length > 0 ? (
+          ) : rewards.history && rewards.history.length > 0 ? (
             <div className="divide-y divide-slate-50">
               <AnimatePresence>
                 {rewards.history.map((item: any, idx: number) => (

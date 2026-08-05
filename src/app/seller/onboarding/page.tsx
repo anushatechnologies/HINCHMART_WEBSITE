@@ -159,6 +159,23 @@ export default function SellerOnboarding() {
 
   const handleVerify = async (type: 'gst' | 'pan' | 'bank') => {
     if (!vendorId) return;
+    
+    if (type === 'gst') {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(formData.gstin)) {
+        setError("Invalid GSTIN format. Please enter a valid 15-digit GST number.");
+        return;
+      }
+    }
+    
+    if (type === 'pan') {
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(formData.panNumber)) {
+        setError("Invalid PAN format. Please enter a valid 10-character PAN.");
+        return;
+      }
+    }
+    
     setVerifying(type);
     setError('');
     

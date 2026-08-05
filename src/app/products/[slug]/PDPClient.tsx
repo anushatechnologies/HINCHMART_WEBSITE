@@ -22,6 +22,11 @@ export default function PDPClient({ product }: PDPClientProps) {
   const [reviews, setReviews] = useState<any[]>([]);
   const [isInWishlist, setIsInWishlist] = useState(false);
 
+  // Rental specific states
+  const [rentalStart, setRentalStart] = useState<string>('');
+  const [rentalEnd, setRentalEnd] = useState<string>('');
+  const [operatorRequired, setOperatorRequired] = useState(false);
+
   const primaryImages = product?.images || [];
   
   // Dynamic price depending on variant or base price
@@ -153,16 +158,21 @@ export default function PDPClient({ product }: PDPClientProps) {
         guestCart.push({
           id: Date.now(), // temporary id
           quantity: qty,
+          isRental: product.productType === 'RENTAL',
+          rentalStart: rentalStart || undefined,
+          rentalEnd: rentalEnd || undefined,
+          operatorRequired,
           variant: {
             id: vId,
             sku: selectedVariant?.sku || 'N/A',
-            price: selectedVariant?.price || product.basePrice,
+            price: selectedVariant?.price || (product.productType === 'RENTAL' ? product.rentalDetails?.pricePerDay : product.basePrice),
             stockQty: selectedVariant?.stockQty || 100,
             product: {
               id: product.id,
               name: product.name,
               brand: product.brand,
               moq: product.moq,
+              productType: product.productType,
               stockStatus: product.stockStatus,
               images: product.images
             }
@@ -200,9 +210,20 @@ export default function PDPClient({ product }: PDPClientProps) {
     }
 
     // Minimum Order Quantity validation
-    if (qty < product.moq) {
+    if (product.productType !== 'RENTAL' && qty < product.moq) {
       setCartMsg({ text: `Minimum order quantity is ${product.moq} units.`, type: 'error' });
       return;
+    }
+    
+    if (product.productType === 'RENTAL') {
+      if (!rentalStart || !rentalEnd) {
+        setCartMsg({ text: 'Please select rental start and end dates.', type: 'error' });
+        return;
+      }
+      if (new Date(rentalStart) > new Date(rentalEnd)) {
+        setCartMsg({ text: 'End date must be after start date.', type: 'error' });
+        return;
+      }
     }
 
     setAdding(true);
@@ -216,7 +237,11 @@ export default function PDPClient({ product }: PDPClientProps) {
         body: JSON.stringify({
           variantId: selectedVariant?.id || null,
           productId: product.id,
-          quantity: qty
+          quantity: qty,
+          isRental: product.productType === 'RENTAL',
+          rentalStart: rentalStart || undefined,
+          rentalEnd: rentalEnd || undefined,
+          operatorRequired
         })
       });
       const data = await res.json();
@@ -385,40 +410,83 @@ export default function PDPClient({ product }: PDPClientProps) {
 
           {/* Pricing Block */}
           <div>
-            {product?.isContractPrice && (
-              <div className="mb-2 inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-xs font-black uppercase px-2 py-1 rounded">
-                <CheckCircle size={14} /> Contract Price Applied
-              </div>
-            )}
-            <div className="flex items-baseline gap-3 mb-1">
-              <span className="text-3xl font-black text-slate-900">₹{displayPrice.toLocaleString('en-IN')}</span>
-              <span className="text-sm text-slate-500 font-medium">(Incl. of all taxes)</span>
-            </div>
-            {(displayMrp > displayPrice && !product?.isContractPrice) && (
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm text-slate-500">MRP <span className="line-through">₹{displayMrp.toLocaleString('en-IN')}</span></span>
-                <span className="text-xs font-black text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">{discount}% OFF</span>
-              </div>
-            )}
-            <p className="text-xs text-slate-500 mb-4 border-b border-slate-100 pb-4">₹{Math.floor(displayPrice * 0.82)} + ₹{Math.ceil(displayPrice * 0.18)} GST (18%)</p>
-            
-            {/* Buy More & Save More */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden mt-4 shadow-sm">
-              <div className="bg-slate-50 px-4 py-2 border-b border-slate-100">
-                <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Buy More & Save More</span>
-              </div>
-              <div className="grid grid-cols-5 bg-white divide-x divide-slate-100">
-                {[
-                  { q: '2', d: 2 }, { q: '3', d: 3 }, { q: '4-5', d: 5 }, { q: '6-7', d: 8 }, { q: '8+', d: 10 }
-                ].map((tier, idx) => (
-                  <div key={idx} className="p-3 text-center">
-                    <p className="text-[10px] text-slate-500 font-bold mb-1">Qty {tier.q}</p>
-                    <p className="text-xs font-black text-slate-900 mb-1">₹{Math.floor(displayPrice * (1 - tier.d/100))}/pc</p>
-                    <p className="text-[9px] font-black text-blue-600 bg-blue-50 px-1 py-0.5 rounded inline-block">{discount + tier.d}% OFF</p>
+            {product?.productType === 'RENTAL' ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-3xl font-black text-slate-900">₹{Number(product.rentalDetails?.pricePerDay || 0).toLocaleString('en-IN')}</span>
+                  <span className="text-sm font-bold text-amber-700">/ Day</span>
+                </div>
+                <div className="flex gap-4 text-xs font-bold text-slate-600 mb-4">
+                  <span>Hourly: ₹{product.rentalDetails?.pricePerHour || 0}</span>
+                  <span>Weekly: ₹{product.rentalDetails?.pricePerWeek || 0}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Start Date</label>
+                    <input type="date" value={rentalStart} onChange={e => setRentalStart(e.target.value)} min={new Date().toISOString().split('T')[0]} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium focus:border-blue-500 focus:outline-none" />
                   </div>
-                ))}
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">End Date</label>
+                    <input type="date" value={rentalEnd} onChange={e => setRentalEnd(e.target.value)} min={rentalStart || new Date().toISOString().split('T')[0]} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium focus:border-blue-500 focus:outline-none" />
+                  </div>
+                </div>
+                {product.rentalDetails?.operatorAvailable && (
+                  <label className="flex items-center gap-2 mt-4 cursor-pointer text-sm font-bold text-slate-700">
+                    <input type="checkbox" checked={operatorRequired} onChange={e => setOperatorRequired(e.target.checked)} className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300" />
+                    Include Operator (+₹{product.rentalDetails?.operatorPricePerDay}/day)
+                  </label>
+                )}
+                {rentalStart && rentalEnd && new Date(rentalEnd) >= new Date(rentalStart) && (
+                  <div className="mt-4 pt-4 border-t border-amber-200">
+                    <div className="flex justify-between items-center text-sm font-bold text-slate-700 mb-1">
+                      <span>Rental Duration:</span>
+                      <span>{Math.ceil((new Date(rentalEnd).getTime() - new Date(rentalStart).getTime()) / (1000 * 60 * 60 * 24)) + 1} Days</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm font-bold text-slate-700 mb-1">
+                      <span>Security Deposit:</span>
+                      <span>₹{Number(product.rentalDetails?.securityDeposit || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+            ) : (
+              <>
+                {product?.isContractPrice && (
+                  <div className="mb-2 inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-xs font-black uppercase px-2 py-1 rounded">
+                    <CheckCircle size={14} /> Contract Price Applied
+                  </div>
+                )}
+                <div className="flex items-baseline gap-3 mb-1">
+                  <span className="text-3xl font-black text-slate-900">₹{displayPrice.toLocaleString('en-IN')}</span>
+                  <span className="text-sm text-slate-500 font-medium">(Incl. of all taxes)</span>
+                </div>
+                {(displayMrp > displayPrice && !product?.isContractPrice) && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm text-slate-500">MRP <span className="line-through">₹{displayMrp.toLocaleString('en-IN')}</span></span>
+                    <span className="text-xs font-black text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">{discount}% OFF</span>
+                  </div>
+                )}
+                <p className="text-xs text-slate-500 mb-4 border-b border-slate-100 pb-4">₹{Math.floor(displayPrice * 0.82)} + ₹{Math.ceil(displayPrice * 0.18)} GST (18%)</p>
+                
+                {/* Buy More & Save More */}
+                <div className="border border-slate-200 rounded-xl overflow-hidden mt-4 shadow-sm">
+                  <div className="bg-slate-50 px-4 py-2 border-b border-slate-100">
+                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Buy More & Save More</span>
+                  </div>
+                  <div className="grid grid-cols-5 bg-white divide-x divide-slate-100">
+                    {[
+                      { q: '2', d: 2 }, { q: '3', d: 3 }, { q: '4-5', d: 5 }, { q: '6-7', d: 8 }, { q: '8+', d: 10 }
+                    ].map((tier, idx) => (
+                      <div key={idx} className="p-3 text-center">
+                        <p className="text-[10px] text-slate-500 font-bold mb-1">Qty {tier.q}</p>
+                        <p className="text-xs font-black text-slate-900 mb-1">₹{Math.floor(displayPrice * (1 - tier.d/100))}/pc</p>
+                        <p className="text-[9px] font-black text-blue-600 bg-blue-50 px-1 py-0.5 rounded inline-block">{discount + tier.d}% OFF</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Insights */}
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3 mt-4">
@@ -445,39 +513,50 @@ export default function PDPClient({ product }: PDPClientProps) {
 
             {/* Quantity & Actions */}
             <div className="mt-6 flex flex-col gap-3">
-              {/* Primary Actions (Buy/Add) */}
+              {/* Primary Actions (Buy/Add/Book) */}
               <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex items-center border border-slate-300 rounded-xl overflow-hidden bg-white shrink-0 h-14">
-                  <button onClick={() => setQty(Math.max(product?.moq || 1, qty - 1))} className="w-12 h-full flex items-center justify-center hover:bg-slate-100 text-slate-700 font-bold text-lg transition-colors">-</button>
-                  <span className="w-12 text-center font-black text-slate-900">{qty}</span>
-                  <button onClick={() => setQty(qty + 1)} className="w-12 h-full flex items-center justify-center hover:bg-slate-100 text-slate-700 font-bold text-lg transition-colors">+</button>
-                </div>
-                <button
-                  onClick={() => handleAddToCart(false)}
-                  disabled={adding || product?.stockStatus === 'OUT_OF_STOCK'}
-                  className="flex-1 bg-white border-2 border-orange-500 hover:bg-orange-50 text-orange-500 font-black py-3 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-60 uppercase text-sm tracking-widest shadow-sm"
-                >
-                  <ShoppingCart size={18}/> {adding ? 'Adding...' : 'Add to Cart'}
-                </button>
-                <button
-                  onClick={() => handleAddToCart(true)}
-                  disabled={adding || product?.stockStatus === 'OUT_OF_STOCK'}
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-black py-3 rounded-xl shadow-lg shadow-orange-500/20 transition-all disabled:opacity-60 uppercase text-sm tracking-widest"
-                >
-                  Buy Now
-                </button>
+                {product?.productType === 'RENTAL' ? (
+                  <>
+                    <button
+                      onClick={() => handleAddToCart(false)}
+                      disabled={adding || !rentalStart || !rentalEnd || product?.stockStatus === 'OUT_OF_STOCK'}
+                      className="flex-1 bg-amber-500 hover:bg-amber-600 text-black font-black py-3 rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-60 uppercase text-sm tracking-widest"
+                    >
+                      <Calendar size={18}/> {adding ? 'Booking...' : 'Book Rental'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center border border-slate-300 rounded-xl overflow-hidden bg-white shrink-0 h-14">
+                      <button onClick={() => setQty(Math.max(product?.moq || 1, qty - 1))} className="w-12 h-full flex items-center justify-center hover:bg-slate-100 text-slate-700 font-bold text-lg transition-colors">-</button>
+                      <span className="w-12 text-center font-black text-slate-900">{qty}</span>
+                      <button onClick={() => setQty(qty + 1)} className="w-12 h-full flex items-center justify-center hover:bg-slate-100 text-slate-700 font-bold text-lg transition-colors">+</button>
+                    </div>
+                    <button
+                      onClick={() => handleAddToCart(false)}
+                      disabled={adding || product?.stockStatus === 'OUT_OF_STOCK'}
+                      className="flex-1 bg-white border-2 border-orange-500 hover:bg-orange-50 text-orange-500 font-black py-3 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-60 uppercase text-sm tracking-widest shadow-sm"
+                    >
+                      <ShoppingCart size={18}/> {adding ? 'Adding...' : 'Add to Cart'}
+                    </button>
+                    <button
+                      onClick={() => handleAddToCart(true)}
+                      disabled={adding || product?.stockStatus === 'OUT_OF_STOCK'}
+                      className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-black py-3 rounded-xl shadow-lg shadow-orange-500/20 transition-all disabled:opacity-60 uppercase text-sm tracking-widest"
+                    >
+                      Buy Now
+                    </button>
+                  </>
+                )}
               </div>
 
               {/* Secondary Actions (Rent/Book/Compare/Wishlist) */}
               <div className="flex flex-col sm:flex-row gap-3">
-                {product?.isRentable && (
-                  <button className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-sm">
-                    <Calendar size={18} /> Rent Equipment
+                {product?.productType !== 'RENTAL' && (
+                  <button className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm border border-blue-200">
+                    <Wrench size={18} /> Book Installation
                   </button>
                 )}
-                <button className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm border border-blue-200">
-                  <Wrench size={18} /> Book Installation
-                </button>
                 <div className="flex gap-3 shrink-0">
                   <button 
                     className="w-12 h-12 border border-slate-300 rounded-xl flex items-center justify-center hover:border-slate-400 text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all shadow-sm"

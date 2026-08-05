@@ -315,7 +315,19 @@ export default function CartPageClient() {
                               {prod.name}
                             </Link>
                             <p className="text-xs text-slate-500 mt-1">SKU: {item.variant.sku}</p>
-                            <p className="text-xs font-bold text-orange-600 mt-1">MOQ Limit: {prod.moq} units</p>
+                            
+                            {item.isRental ? (
+                              <div className="mt-2 bg-amber-50 border border-amber-100 rounded-lg p-2 inline-block">
+                                <p className="text-xs font-bold text-amber-800">
+                                  📅 {item.rentalStart} to {item.rentalEnd}
+                                </p>
+                                {item.operatorRequired && (
+                                  <p className="text-[10px] text-amber-700 font-bold mt-0.5">+ Operator Included</p>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-xs font-bold text-orange-600 mt-1">MOQ Limit: {prod.moq} units</p>
+                            )}
                           </div>
                         </div>
 

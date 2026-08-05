@@ -6,8 +6,8 @@ import React from 'react';
 export default function ConditionalUI({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
-  // Hide on Seller and Admin routes
-  const isHidden = pathname?.startsWith('/seller') || pathname?.startsWith('/admin');
+  // Hide customer website headers and footers on Seller, Admin, and Sell portal routes
+  const isHidden = pathname?.startsWith('/seller') || pathname?.startsWith('/admin') || pathname?.startsWith('/sell');
   
   if (isHidden) {
     return null;

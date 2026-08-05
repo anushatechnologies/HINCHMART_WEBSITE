@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  devIndicators: {
+    appIsrStatus: false,
+    buildActivity: false,
+  },
   images: {
     remotePatterns: [
       {
@@ -15,7 +19,6 @@ const nextConfig = {
       },
     ],
   },
-  // output: 'export', // disabled for server build
   output: 'standalone',
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',

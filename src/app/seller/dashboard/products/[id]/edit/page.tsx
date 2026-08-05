@@ -36,8 +36,19 @@ export default function ProductEditor() {
   const [docs, setDocs]     = useState<any[]>([]);
   const [variants, setVariants] = useState<any[]>([]);
 
+  const apiFetch = async (url: string, options: any = {}) => {
+    const token = localStorage.getItem('seller_token');
+    return fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+  };
+
   const fetchProduct = useCallback(async () => {
-    const res = await fetch(`${API}/products/${id}`);
+    const res = await apiFetch(`${API}/products/${id}`);
     const data = await res.json();
     if (data.success) {
       setProduct(data.data);
@@ -51,9 +62,17 @@ export default function ProductEditor() {
 
   useEffect(() => { fetchProduct(); }, [fetchProduct]);
 
+  const submitProduct = async () => {
+    if (!confirm('Are you sure you want to submit this product for review?')) return;
+    setSaving(true);
+    await apiFetch(`${API}/products/${id}/submit`, { method: 'POST' });
+    await fetchProduct();
+    setSaving(false);
+  };
+
   const saveGeneral = async () => {
     setSaving(true);
-    await fetch(`${API}/products/${id}`, {
+    await apiFetch(`${API}/products/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -70,7 +89,7 @@ export default function ProductEditor() {
 
   const savePricing = async () => {
     setSaving(true);
-    await fetch(`${API}/products/${id}`, {
+    await apiFetch(`${API}/products/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ basePrice: product.basePrice, mrp: product.mrp, gstPercent: product.gstPercent, moq: product.moq })
@@ -85,7 +104,7 @@ export default function ProductEditor() {
       const specs = typeof product.technicalSpecs === 'string' 
         ? JSON.parse(product.technicalSpecs) 
         : product.technicalSpecs;
-      await fetch(`${API}/products/${id}`, {
+      await apiFetch(`${API}/products/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ technicalSpecs: specs, features: product.features })
@@ -97,7 +116,7 @@ export default function ProductEditor() {
 
   const saveSEO = async () => {
     setSaving(true);
-    await fetch(`${API}/products/${id}`, {
+    await apiFetch(`${API}/products/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ metaTitle: product.metaTitle, metaDescription: product.metaDescription, metaKeywords: product.metaKeywords })
@@ -107,7 +126,7 @@ export default function ProductEditor() {
   };
 
   const addImage = async (url: string, isPrimary: boolean) => {
-    const res = await fetch(`${API}/products/${id}/images`, {
+    const res = await apiFetch(`${API}/products/${id}/images`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url, isPrimary })
@@ -117,17 +136,17 @@ export default function ProductEditor() {
   };
 
   const removeImage = async (imageId: number) => {
-    await fetch(`${API}/products/${id}/images/${imageId}`, { method: 'DELETE' });
+    await apiFetch(`${API}/products/${id}/images/${imageId}`, { method: 'DELETE' });
     setImages(prev => prev.filter(i => i.id !== imageId));
   };
 
   const setPrimary = async (imageId: number) => {
-    await fetch(`${API}/products/${id}/images/${imageId}/primary`, { method: 'PATCH' });
+    await apiFetch(`${API}/products/${id}/images/${imageId}/primary`, { method: 'PATCH' });
     setImages(prev => prev.map(i => ({ ...i, isPrimary: i.id === imageId })));
   };
 
   const addVideo = async (url: string, title: string, type: string) => {
-    const res = await fetch(`${API}/products/${id}/videos`, {
+    const res = await apiFetch(`${API}/products/${id}/videos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url, title, type })
@@ -137,7 +156,7 @@ export default function ProductEditor() {
   };
 
   const addDoc = async (url: string, title: string, type: string) => {
-    const res = await fetch(`${API}/products/${id}/documents`, {
+    const res = await apiFetch(`${API}/products/${id}/documents`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url, title, type })
@@ -147,7 +166,7 @@ export default function ProductEditor() {
   };
 
   const addVariant = async (sku: string, price: string, stock: string) => {
-    const res = await fetch(`${API}/products/${id}/variants`, {
+    const res = await apiFetch(`${API}/products/${id}/variants`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sku, price: parseFloat(price), stockQty: parseInt(stock) })
@@ -157,7 +176,7 @@ export default function ProductEditor() {
   };
 
   const removeVariant = async (variantId: number) => {
-    const res = await fetch(`${API}/products/${id}/variants/${variantId}`, { method: 'DELETE' });
+    const res = await apiFetch(`${API}/products/${id}/variants/${variantId}`, { method: 'DELETE' });
     const data = await res.json();
     if (data.success) setVariants(prev => prev.filter(v => v.id !== variantId));
     else alert(data.message);
@@ -194,10 +213,22 @@ export default function ProductEditor() {
             <p className="text-slate-500 text-sm mt-0.5">ID: {id} · {product.category?.name}</p>
           </div>
         </div>
-        <a href={`/products/${product.slug}`} target="_blank"
-          className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg text-slate-600 text-sm hover:bg-slate-50 transition-colors">
-          <ExternalLink size={14} /> Preview
-        </a>
+        <div className="flex items-center gap-3">
+          {['DRAFT', 'CHANGES_REQUIRED', 'REJECTED'].includes(product.approvalStatus) && (
+            <button 
+              onClick={submitProduct}
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50"
+            >
+              <CheckCircle size={16} />
+              Submit for Approval
+            </button>
+          )}
+          <a href={`/products/${product.slug}`} target="_blank"
+            className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg text-slate-600 text-sm hover:bg-slate-50 transition-colors">
+            <ExternalLink size={14} /> Preview
+          </a>
+        </div>
       </div>
 
       {/* Tab Navigation */}

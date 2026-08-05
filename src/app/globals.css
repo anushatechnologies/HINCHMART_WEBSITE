@@ -40,3 +40,16 @@ body {
   background: rgba(249, 115, 22, 0.2);
   color: #0f172a;
 }
+
+/* Hide Next.js Dev Indicator Badge ('N' icon at bottom left) */
+nextjs-portal,
+[data-nextjs-toast],
+div[class*="nextjs-toast"],
+div[data-nextjs-toast-errors-parent],
+#__next-build-watcher,
+#next-route-announcer {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

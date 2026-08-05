@@ -19,7 +19,7 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } }
 };
 
-const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981'];
+const PIE_COLORS = ['#FF5722', '#0F2537', '#2563eb', '#10b981'];
 
 export default function SalesDashboard() {
   const [period, setPeriod] = useState('monthly');
@@ -39,9 +39,15 @@ export default function SalesDashboard() {
       try {
         const parsed = JSON.parse(info);
         fetch(`http://localhost:5000/api/vendors/${parsed.id}/dashboard/sales`)
-          .then(res => res.json())
+          .then(async res => {
+            const ct = res.headers.get('content-type');
+            if (res.ok && ct && ct.includes('application/json')) {
+              return res.json();
+            }
+            return null;
+          })
           .then(resData => {
-            if (resData.success) {
+            if (resData?.success) {
               setData(resData.data);
             }
           })
@@ -55,11 +61,10 @@ export default function SalesDashboard() {
     }
   }, []);
 
-  // Format data for Recharts
   const areaChartData = data.monthlyLabels.map((label, idx) => ({
     name: label,
     revenue: data.monthlyData[idx] || 0,
-    orders: 0 // Mocked out because backend doesn't provide monthly orders yet
+    orders: 0
   }));
 
   const pieChartData = data.channels.length > 0 
@@ -75,9 +80,9 @@ export default function SalesDashboard() {
       {/* Header */}
       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Sales Analytics</h1>
+          <h1 className="text-3xl font-extrabold text-[#0F2537] tracking-tight">Sales Analytics</h1>
           <p className="text-slate-500 mt-2 flex items-center gap-2">
-            <Activity size={16} className="text-blue-500" /> Track your revenue performance and sales trends.
+            <Activity size={16} className="text-[#FF5722]" /> Track your revenue performance and sales trends.
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -86,13 +91,13 @@ export default function SalesDashboard() {
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className={`px-5 py-2 rounded-lg text-sm font-bold capitalize transition-all ${period === p ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-5 py-2 rounded-lg text-sm font-bold capitalize transition-all ${period === p ? 'bg-white text-[#0F2537] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 {p}
               </button>
             ))}
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-xl shadow-lg shadow-slate-900/20 transition-all hover:-translate-y-0.5">
+          <button className="flex items-center gap-2 px-4 py-2 bg-[#0F2537] hover:bg-[#1E3A8A] text-white text-sm font-bold rounded-xl shadow-lg transition-all hover:-translate-y-0.5">
             <Download size={16} /> Export
           </button>
         </div>
@@ -101,10 +106,10 @@ export default function SalesDashboard() {
       {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Gross Revenue', value: data.kpis.grossRevenue, change: '+18.2%', up: true, icon: IndianRupee, color: 'from-emerald-500 to-teal-400' },
-          { label: 'Net Revenue', value: data.kpis.netRevenue, change: '+15.1%', up: true, icon: Target, color: 'from-blue-600 to-cyan-400' },
-          { label: 'Avg. Order Value', value: data.kpis.aov, change: '+8.4%', up: true, icon: ShoppingBag, color: 'from-purple-500 to-fuchsia-400' },
-          { label: 'Conversion Rate', value: data.kpis.conversionRate, change: '-0.2%', up: false, icon: Percent, color: 'from-amber-500 to-orange-400' },
+          { label: 'Gross Revenue', value: data.kpis.grossRevenue, change: '+18.2%', up: true, icon: IndianRupee, color: 'from-[#FF5722] to-[#FF7043]' },
+          { label: 'Net Revenue', value: data.kpis.netRevenue, change: '+15.1%', up: true, icon: Target, color: 'from-[#0F2537] to-[#1E3A8A]' },
+          { label: 'Avg. Order Value', value: data.kpis.aov, change: '+8.4%', up: true, icon: ShoppingBag, color: 'from-blue-600 to-cyan-500' },
+          { label: 'Conversion Rate', value: data.kpis.conversionRate, change: '-0.2%', up: false, icon: Percent, color: 'from-emerald-500 to-teal-400' },
         ].map(kpi => {
           const Icon = kpi.icon;
           return (
@@ -120,7 +125,7 @@ export default function SalesDashboard() {
               </div>
               <div className="relative z-10">
                 <p className="text-sm text-slate-500 font-semibold mb-1">{kpi.label}</p>
-                <p className="text-3xl font-black text-slate-900 tracking-tight">{kpi.value}</p>
+                <p className="text-3xl font-black text-[#0F2537] tracking-tight">{kpi.value}</p>
               </div>
             </motion.div>
           );
@@ -132,14 +137,14 @@ export default function SalesDashboard() {
         <motion.div variants={itemVariants} className="xl:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <TrendingUp size={20} className="text-emerald-500" /> Revenue vs Orders
+              <h2 className="text-lg font-bold text-[#0F2537] flex items-center gap-2">
+                <TrendingUp size={20} className="text-[#FF5722]" /> Revenue vs Orders
               </h2>
               <p className="text-sm text-slate-500 mt-1">Comparing total revenue with order volume over time.</p>
             </div>
             <div className="flex items-center gap-4 text-sm font-semibold">
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500"></div> Revenue</div>
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div> Orders</div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#FF5722]"></div> Revenue</div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#0F2537]"></div> Orders</div>
             </div>
           </div>
           <div className="h-[350px] w-full">
@@ -147,12 +152,12 @@ export default function SalesDashboard() {
               <AreaChart data={areaChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#FF5722" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#FF5722" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#0F2537" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#0F2537" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
@@ -163,8 +168,8 @@ export default function SalesDashboard() {
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   formatter={(value: any, name: any) => [name === 'revenue' ? `₹${value?.toLocaleString() || 0}` : value, name === 'revenue' ? 'Revenue' : 'Orders']}
                 />
-                <Area yAxisId="left" type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
-                <Area yAxisId="right" type="monotone" dataKey="orders" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorOrders)" />
+                <Area yAxisId="left" type="monotone" dataKey="revenue" stroke="#FF5722" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                <Area yAxisId="right" type="monotone" dataKey="orders" stroke="#0F2537" strokeWidth={3} fillOpacity={1} fill="url(#colorOrders)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -174,8 +179,8 @@ export default function SalesDashboard() {
         <div className="space-y-8">
           {/* Pie Chart */}
           <motion.div variants={itemVariants} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-              <PieChartIcon size={20} className="text-purple-500" /> Sales by Channel
+            <h2 className="text-lg font-bold text-[#0F2537] mb-6 flex items-center gap-2">
+              <PieChartIcon size={20} className="text-[#FF5722]" /> Sales by Channel
             </h2>
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -202,7 +207,7 @@ export default function SalesDashboard() {
                 <div key={entry.name} className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}></div>
                   <div className="text-sm">
-                    <p className="font-semibold text-slate-900">{entry.value}%</p>
+                    <p className="font-semibold text-[#0F2537]">{entry.value}%</p>
                     <p className="text-xs text-slate-500">{entry.name}</p>
                   </div>
                 </div>
@@ -212,8 +217,8 @@ export default function SalesDashboard() {
 
           {/* Bar Chart */}
           <motion.div variants={itemVariants} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-              <Calendar size={20} className="text-blue-500" /> This Week's Revenue
+            <h2 className="text-lg font-bold text-[#0F2537] mb-6 flex items-center gap-2">
+              <Calendar size={20} className="text-blue-600" /> This Week's Revenue
             </h2>
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -226,7 +231,7 @@ export default function SalesDashboard() {
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                     formatter={(value: any) => [`₹${value.toLocaleString()}`, 'Revenue']}
                   />
-                  <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="revenue" fill="#FF5722" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -237,10 +242,10 @@ export default function SalesDashboard() {
       {/* Recent Sales Table */}
       <motion.div variants={itemVariants} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <ShoppingBag size={20} className="text-amber-500" /> Recent Sales Details
+          <h2 className="text-lg font-bold text-[#0F2537] flex items-center gap-2">
+            <ShoppingBag size={20} className="text-[#FF5722]" /> Recent Sales Details
           </h2>
-          <Link href="/seller/dashboard/orders" className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 group">
+          <Link href="/seller/dashboard/orders" prefetch={true} className="text-sm font-semibold text-[#FF5722] hover:text-[#e64a19] flex items-center gap-1 group">
             View All Orders <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
@@ -271,12 +276,12 @@ export default function SalesDashboard() {
                   transition={{ delay: idx * 0.1 }}
                   className="hover:bg-slate-50/80 transition-colors cursor-pointer"
                 >
-                  <td className="px-6 py-4 text-sm font-bold text-slate-900">{row.id}</td>
+                  <td className="px-6 py-4 text-sm font-bold text-[#0F2537]">{row.id}</td>
                   <td className="px-6 py-4 text-sm font-semibold text-slate-700">{row.customer}</td>
                   <td className="px-6 py-4 text-sm text-slate-500 font-medium">
                     <span className="bg-slate-100 rounded-lg px-2.5 py-1">{row.products} items</span>
                   </td>
-                  <td className="px-6 py-4 text-sm font-black text-slate-900">{row.amount}</td>
+                  <td className="px-6 py-4 text-sm font-black text-[#0F2537]">{row.amount}</td>
                   <td className="px-6 py-4 text-sm font-semibold text-red-500">
                     <span className="bg-red-50 rounded-lg px-2.5 py-1">{row.commission}</span>
                   </td>
