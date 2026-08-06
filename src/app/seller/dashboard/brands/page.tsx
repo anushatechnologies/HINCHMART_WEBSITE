@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Tag, Search, Plus, Loader2, RefreshCw, CheckCircle2, ShieldCheck, Box, X,
-  Building2, Award, Clock, XCircle, AlertTriangle
+  Building2, Award, Clock, XCircle, AlertTriangle, Upload, Image as ImageIcon
 } from 'lucide-react';
 
 const DEFAULT_BRANDS = [
@@ -62,6 +62,44 @@ export default function BrandsHub() {
     regNo: '',
     logoUrl: ''
   });
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const fileInputRef = useState<any>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const { authFetch } = await import('@/lib/auth');
+      const res = await authFetch('http://localhost:5000/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const json = await res.json();
+      if (json.success && json.url) {
+        setNewBrand(prev => ({ ...prev, logoUrl: json.url }));
+      } else {
+        // Fallback to local Data URL
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          setNewBrand(prev => ({ ...prev, logoUrl: ev.target?.result as string }));
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch (err) {
+      console.error('File upload failed, using Data URL fallback', err);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setNewBrand(prev => ({ ...prev, logoUrl: ev.target?.result as string }));
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
 
   const loadBrands = useCallback(() => {
     setLoading(true);
@@ -395,8 +433,43 @@ export default function BrandsHub() {
                   />
                 </div>
 
+                {/* Brand Logo Upload Section */}
                 <div>
-                  <label className="block text-xs font-bold text-[#0F2537] uppercase tracking-wider mb-1.5">Brand Logo Image URL</label>
+                  <label className="block text-xs font-bold text-[#0F2537] uppercase tracking-wider mb-2">Brand Logo *</label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden bg-slate-50 shrink-0 relative group">
+                      {newBrand.logoUrl ? (
+                        <img src={newBrand.logoUrl} alt="Brand Logo Preview" className="w-full h-full object-contain p-1" />
+                      ) : (
+                        <div className="flex flex-col items-center gap-1 text-slate-400">
+                          <ImageIcon size={22} />
+                          <span className="text-[9px] font-bold text-center">No Logo</span>
+                        </div>
+                      )}
+                      {uploadingLogo && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white">
+                          <Loader2 size={18} className="animate-spin" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-2">
+                      <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 bg-orange-50 border-2 border-dashed border-[#FF5722]/40 hover:border-[#FF5722] hover:bg-orange-100 text-[#FF5722] text-xs font-black rounded-xl transition-all">
+                        <Upload size={15} /> {newBrand.logoUrl ? 'Change Logo File' : 'Upload Brand Logo File'}
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/jpg"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      <p className="text-[10px] text-slate-400">PNG, JPG, WebP. Max 5MB square image recommended.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#0F2537] uppercase tracking-wider mb-1.5">Or Paste Brand Logo Image URL</label>
                   <input
                     type="text"
                     value={newBrand.logoUrl}
@@ -404,7 +477,6 @@ export default function BrandsHub() {
                     placeholder="https://example.com/logo.png"
                     className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-mono text-[#0F2537] outline-none focus:border-[#FF5722]"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">Provide a direct image URL for the brand logo.</p>
                 </div>
 
                 <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
