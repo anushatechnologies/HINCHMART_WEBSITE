@@ -86,10 +86,18 @@ export default function ProductsHub() {
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Move this product to trash?')) return;
-    const token = localStorage.getItem('seller_token');
-    await fetch(`${API}/vendors/products/${id}`, { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {} });
-    fetchProducts();
+    if (!confirm('Are you sure you want to delete this product?')) return;
+    try {
+      const token = localStorage.getItem('seller_token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`${API}/vendors/products/${id}`, { method: 'DELETE', headers });
+      if (!res.ok) {
+        await fetch(`${API}/products/${id}`, { method: 'DELETE', headers });
+      }
+      setProducts(prev => prev.filter(p => p.id !== id));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const filtered = products.filter(p => {
