@@ -45,14 +45,8 @@ export default function VendorProductsPage() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('seller_token');
-      if (!token) {
-        setProducts([]);
-        setLoading(false);
-        return;
-      }
-      const headers = { Authorization: `Bearer ${token}` };
-      const res = await fetch(`${API}/products`, { headers });
+      const { authFetch } = await import('@/lib/auth');
+      const res = await authFetch(`${API}/products`);
       const contentType = res.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) {
         setProducts([]);
@@ -75,9 +69,8 @@ export default function VendorProductsPage() {
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
     try {
-      const token = localStorage.getItem('seller_token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      await fetch(`${API}/products/${id}`, { method: 'DELETE', headers });
+      const { authFetch } = await import('@/lib/auth');
+      await authFetch(`${API}/products/${id}`, { method: 'DELETE' });
       setProducts(prev => prev.filter(p => p.id !== id));
     } catch (err) {
       console.error('Delete failed', err);

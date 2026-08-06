@@ -28,10 +28,8 @@ export default function CustomersHub() {
     if (!vendorId) return;
     setLoading(true);
     try {
-      const token = localStorage.getItem('seller_token');
-      const res = await fetch(`${API}/vendors/analytics/overview?vendorId=${vendorId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { authFetch } = await import('@/lib/auth');
+      const res = await authFetch(`${API}/vendors/analytics/overview?vendorId=${vendorId}`);
       const data = await res.json();
       if (data.success && data.data?.recentOrders) {
         // Build customer profiles from orders

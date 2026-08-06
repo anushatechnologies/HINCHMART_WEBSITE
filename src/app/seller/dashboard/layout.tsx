@@ -169,7 +169,20 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
     return () => window.removeEventListener('seller_info_updated', loadInfo);
   }, [router]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // Revoke refresh token in DB
+      const refreshToken = localStorage.getItem('seller_refresh_token');
+      if (refreshToken) {
+        await fetch('http://localhost:5000/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken })
+        });
+      }
+    } catch { /* ignore errors on logout */ }
+
+    // Clear all local tokens
     localStorage.removeItem('seller_token');
     localStorage.removeItem('seller_refresh_token');
     localStorage.removeItem('seller_info');

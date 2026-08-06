@@ -24,10 +24,8 @@ export default function WarehousesHub() {
     if (!vendorId) return;
     setLoading(true);
     try {
-      const token = localStorage.getItem('seller_token');
-      const res = await fetch(`${API}/vendors/warehouses?vendorId=${vendorId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { authFetch } = await import('@/lib/auth');
+      const res = await authFetch(`${API}/vendors/warehouses?vendorId=${vendorId}`);
       const data = await res.json();
       if (data.success) {
         setWarehouses(Array.isArray(data.data) ? data.data : []);

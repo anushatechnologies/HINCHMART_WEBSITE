@@ -34,10 +34,9 @@ export default function InventoryHub() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('seller_token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const { authFetch } = await import('@/lib/auth');
       const targetVendor = vendorId || 13;
-      const res = await fetch(`${API}/vendors/products?vendorId=${targetVendor}`, { headers });
+      const res = await authFetch(`${API}/vendors/products?vendorId=${targetVendor}`);
       // Guard: only parse as JSON if response is actually JSON (not an HTML auth redirect page)
       const contentType = res.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) {
@@ -98,13 +97,9 @@ export default function InventoryHub() {
     if (!editingItem) return;
     setSaving(true);
     try {
-      const token = localStorage.getItem('seller_token');
-      const headers: any = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const res = await fetch(`${API}/vendors/inventory/update`, {
+      const { authFetch } = await import('@/lib/auth');
+      const res = await authFetch(`${API}/vendors/inventory/update`, {
         method: 'PATCH',
-        headers,
         body: JSON.stringify({
           productId: editingItem.productId,
           variantId: editingItem.variantId,

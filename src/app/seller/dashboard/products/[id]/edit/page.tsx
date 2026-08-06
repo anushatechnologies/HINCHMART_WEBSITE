@@ -36,16 +36,13 @@ export default function ProductEditor() {
   const [docs, setDocs]     = useState<any[]>([]);
   const [variants, setVariants] = useState<any[]>([]);
 
+
+  // Use centralised authFetch which auto-refreshes tokens on 401 TOKEN_EXPIRED
   const apiFetch = async (url: string, options: any = {}) => {
-    const token = localStorage.getItem('seller_token');
-    return fetch(url, {
-      ...options,
-      headers: {
-        ...options.headers,
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      }
-    });
+    const { authFetch } = await import('@/lib/auth');
+    return authFetch(url, options);
   };
+
 
   const fetchProduct = useCallback(async () => {
     const res = await apiFetch(`${API}/products/${id}`);

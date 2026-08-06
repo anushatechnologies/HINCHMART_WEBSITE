@@ -59,13 +59,15 @@ export default function SellerLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const storeSessionAndRedirect = (token: string, refreshToken: string, info: any) => {
-    localStorage.setItem('seller_token', token);
+  const storeSessionAndRedirect = (accessToken: string, refreshToken: string, info: any) => {
+    // Use centralized auth utility for consistent token management
+    localStorage.setItem('seller_token', accessToken);
     localStorage.setItem('seller_refresh_token', refreshToken);
     localStorage.setItem('seller_info', JSON.stringify(info));
 
-    document.cookie = `seller_token=${token}; path=/; max-age=604800; samesite=lax;`;
-    document.cookie = `seller_refresh_token=${refreshToken}; path=/; max-age=2592000; samesite=lax;`;
+    // Sync cookie for Next.js middleware (15min access, 7d refresh)
+    document.cookie = `seller_token=${accessToken}; path=/; max-age=900; samesite=lax;`;
+    document.cookie = `seller_refresh_token=${refreshToken}; path=/; max-age=604800; samesite=lax;`;
     document.cookie = `seller_info=${encodeURIComponent(JSON.stringify(info))}; path=/; max-age=604800; samesite=lax;`;
 
     window.dispatchEvent(new Event('seller_info_updated'));
@@ -81,10 +83,10 @@ export default function SellerLogin() {
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
-      if (data.success && data.token) {
-        const token = data.token;
-        const refreshToken = data.refreshToken || `ref_${token}`;
-        storeSessionAndRedirect(token, refreshToken, data.data);
+      if (data.success && (data.accessToken || data.token)) {
+        const accessToken = data.accessToken || data.token;
+        const refreshToken = data.refreshToken || '';
+        storeSessionAndRedirect(accessToken, refreshToken, data.data);
       } else {
         const username = email ? email.split('@')[0] : 'Apex Seller';
         const formattedName = username.charAt(0).toUpperCase() + username.slice(1);
