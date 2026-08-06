@@ -6,15 +6,47 @@ const nextConfig = {
   },
   images: {
     remotePatterns: [
+      // Local backend uploads
       {
         protocol: 'http',
         hostname: 'localhost',
         port: '5000',
         pathname: '/**',
       },
+      // AWS S3
+      {
+        protocol: 'https',
+        hostname: '*.amazonaws.com',
+        pathname: '/**',
+      },
+      // Cloudinary
       {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
+        pathname: '/**',
+      },
+      // Unsplash
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
+      // Pexels
+      {
+        protocol: 'https',
+        hostname: 'images.pexels.com',
+        pathname: '/**',
+      },
+      // Picsum (placeholder images)
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
+        pathname: '/**',
+      },
+      // Any other HTTP sources
+      {
+        protocol: 'https',
+        hostname: '**',
         pathname: '/**',
       },
     ],

@@ -38,6 +38,13 @@ export default function InventoryHub() {
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const targetVendor = vendorId || 13;
       const res = await fetch(`${API}/vendors/products?vendorId=${targetVendor}`, { headers });
+      // Guard: only parse as JSON if response is actually JSON (not an HTML auth redirect page)
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        console.warn('Inventory: got non-JSON response, skipping parse');
+        setLoading(false);
+        return;
+      }
       const data = await res.json();
       if (data.success && data.data) {
         const list: any[] = [];
@@ -105,7 +112,8 @@ export default function InventoryHub() {
         })
       });
 
-      const data = await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      const data = contentType.includes('application/json') ? await res.json() : { success: res.ok };
       if (data.success) {
         setItems(prev => prev.map(item => {
           const isMatch = editingItem.variantId 
