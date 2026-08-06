@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Boxes, Search, Filter, RefreshCw, Loader2, Save, X, Plus, Minus,
-  AlertTriangle, CheckCircle, Package, Edit3, Sparkles, Layers, ShieldCheck
+  Boxes, Search, RefreshCw, Loader2, Save, X, Plus, Minus,
+  AlertTriangle, CheckCircle, Package, Edit3, Sparkles, ShieldCheck
 } from 'lucide-react';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
