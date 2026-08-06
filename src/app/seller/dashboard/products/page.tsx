@@ -64,7 +64,7 @@ export default function ProductsHub() {
         setProducts(data.data);
       } else {
         // Fallback to global products catalog if vendor specific list is empty
-        const globalRes = await fetch(`${API}/products?limit=50`);
+        const globalRes = await fetch(`${API}/products?limit=1000`);
         const globalData = await globalRes.json();
         if (globalData.success && globalData.data) {
           setProducts(globalData.data);
@@ -74,7 +74,7 @@ export default function ProductsHub() {
       console.error(e);
       // Extra fallback
       try {
-        const globalRes = await fetch(`${API}/products?limit=50`);
+        const globalRes = await fetch(`${API}/products?limit=1000`);
         const globalData = await globalRes.json();
         if (globalData.success && globalData.data) setProducts(globalData.data);
       } catch {}
