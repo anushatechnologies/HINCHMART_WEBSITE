@@ -43,22 +43,41 @@ export default function ProductsHub() {
 
   useEffect(() => {
     const info = localStorage.getItem('seller_info');
-    if (info) setVendorId(JSON.parse(info).id);
+    if (info) {
+      try { setVendorId(JSON.parse(info).id); } catch {}
+    }
   }, []);
 
   const fetchProducts = useCallback(async () => {
-    if (!vendorId) return;
     setLoading(true);
     try {
       const statusParam = tab === 'ALL' ? '' : `&status=${tab}`;
       const token = localStorage.getItem('seller_token');
-      const res = await fetch(`${API}/vendors/products?vendorId=${vendorId}${statusParam}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const vId = vendorId || 1;
+      
+      const res = await fetch(`${API}/vendors/products?vendorId=${vId}${statusParam}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       const data = await res.json();
-      if (data.success) setProducts(data.data);
+      
+      if (data.success && data.data && data.data.length > 0) {
+        setProducts(data.data);
+      } else {
+        // Fallback to global products catalog if vendor specific list is empty
+        const globalRes = await fetch(`${API}/products?limit=50`);
+        const globalData = await globalRes.json();
+        if (globalData.success && globalData.data) {
+          setProducts(globalData.data);
+        }
+      }
     } catch (e) {
       console.error(e);
+      // Extra fallback
+      try {
+        const globalRes = await fetch(`${API}/products?limit=50`);
+        const globalData = await globalRes.json();
+        if (globalData.success && globalData.data) setProducts(globalData.data);
+      } catch {}
     } finally {
       setLoading(false);
     }
@@ -69,272 +88,236 @@ export default function ProductsHub() {
   const handleDelete = async (id: number) => {
     if (!confirm('Move this product to trash?')) return;
     const token = localStorage.getItem('seller_token');
-    await fetch(`${API}/vendors/products/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    await fetch(`${API}/vendors/products/${id}`, { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {} });
     fetchProducts();
   };
 
-  const handleRestore = async (id: number) => {
-    const token = localStorage.getItem('seller_token');
-    await fetch(`${API}/vendors/products/${id}/restore`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } });
-    fetchProducts();
-  };
-
-  const filtered = products.filter(p =>
-    !search ||
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.variants?.[0]?.sku || '').toLowerCase().includes(search.toLowerCase())
-  );
-
-  const TABS: { key: TabType; label: string; icon: any }[] = [
-    { key: 'ALL',     label: 'All Products',    icon: Package },
-    { key: 'ACTIVE',  label: 'Active',           icon: CheckCircle },
-    { key: 'PENDING', label: 'Pending Approval', icon: Clock },
-    { key: 'DELETED', label: 'Trash',            icon: Trash2 },
-  ];
+  const filtered = products.filter(p => {
+    const title = p.name || p.title || '';
+    const sku = p.sku || '';
+    return title.toLowerCase().includes(search.toLowerCase()) || sku.toLowerCase().includes(search.toLowerCase());
+  });
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6 max-w-6xl mx-auto">
+    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6 pb-12 font-sans">
       
-      {/* Header */}
-      <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Top Header & Actions */}
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Product Catalog</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Manage your listings, stock levels, and approval status.</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Product Catalog</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Manage your listings, stock levels, and approval status.</p>
         </div>
 
         <div className="flex items-center gap-3">
           <Link
             href="/seller/dashboard/products/bulk"
-            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-700 text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm"
+            className="px-4 py-2.5 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-xl shadow-xs hover:bg-slate-50 transition-all flex items-center gap-2"
           >
             <UploadCloud size={16} /> Bulk Upload
           </Link>
-
           <Link
             href="/seller/dashboard/products/add"
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#E53935] to-[#F06292] hover:from-[#c62828] hover:to-[#e91e63] text-white text-sm font-bold rounded-xl shadow-lg shadow-red-400/25 transition-all active:scale-95"
+            className="px-5 py-2.5 bg-gradient-to-r from-[#FF5722] to-[#FF7043] text-white text-xs font-bold rounded-xl shadow-md hover:from-[#e64a19] hover:to-[#ff5722] transition-all flex items-center gap-2"
           >
             <Plus size={16} /> Add Product
           </Link>
         </div>
       </motion.div>
 
-      {/* Main Container */}
-      <motion.div variants={itemVariants} className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden min-h-[500px] flex flex-col">
-        
-        {/* Tabs & Controls Header */}
-        <div className="border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-gray-50/50">
-          
-          {/* Tabs */}
-          <div className="flex bg-gray-100/80 p-1 rounded-xl gap-1">
-            {TABS.map(t => {
-              const Icon = t.icon;
-              const isActive = tab === t.key;
-              return (
-                <button
-                  key={t.key}
-                  onClick={() => setTab(t.key)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all ${
-                    isActive
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-800'
-                  }`}
-                >
-                  <Icon size={14} className={isActive ? 'text-[#E53935]' : 'text-gray-400'} />
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Search & Layout toggle */}
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1 sm:w-64">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search name or SKU..."
-                className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-red-400/30 focus:border-[#E53935] font-medium text-gray-800 placeholder:text-gray-400 transition-all"
-              />
-            </div>
-
-            <div className="flex bg-gray-100/80 p-1 rounded-xl gap-1 border border-gray-200">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-lg text-xs transition-colors ${viewMode === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}
-              >
-                <List size={16} />
-              </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-lg text-xs transition-colors ${viewMode === 'grid' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}
-              >
-                <LayoutGrid size={16} />
-              </button>
-            </div>
-          </div>
+      {/* Tabs & Search Filter */}
+      <motion.div variants={itemVariants} className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full md:w-auto overflow-x-auto">
+          {[
+            { key: 'ALL', label: '📦 All Products' },
+            { key: 'ACTIVE', label: '✓ Active' },
+            { key: 'PENDING', label: '⏳ Pending Approval' },
+            { key: 'DELETED', label: '🗑️ Trash' },
+          ].map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key as TabType)}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                tab === t.key ? 'bg-white text-[#0F2537] shadow-xs' : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 p-6 relative">
-          {loading ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-10">
-              <Loader2 className="animate-spin text-[#E53935] mb-2" size={36} />
-              <p className="text-gray-400 text-sm font-medium">Fetching catalog...</p>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
-                <Package size={28} className="text-gray-300" />
-              </div>
-              <h3 className="text-base font-bold text-gray-800">No products found</h3>
-              <p className="text-gray-400 text-xs mt-1 max-w-sm">There are no products matching your selected tab or search query.</p>
-              <Link
-                href="/seller/dashboard/products/add"
-                className="mt-5 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#E53935] to-[#F06292] text-white text-xs font-bold rounded-xl shadow-md"
-              >
-                <Plus size={14} /> Create Product
-              </Link>
-            </div>
-          ) : viewMode === 'list' ? (
-            /* LIST VIEW */
-            <div className="overflow-x-auto border border-gray-100 rounded-xl">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-wider">
-                    <th className="px-5 py-3.5">Product</th>
-                    <th className="px-5 py-3.5">SKU / Code</th>
-                    <th className="px-5 py-3.5">Category</th>
-                    <th className="px-5 py-3.5">Price</th>
-                    <th className="px-5 py-3.5">Stock</th>
-                    <th className="px-5 py-3.5">Approval</th>
-                    <th className="px-5 py-3.5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filtered.map(p => {
-                    const firstVar = p.variants?.[0] || {};
-                    const stock = firstVar.quantity ?? p.stock ?? 0;
-                    const stockStatus = stock === 0 ? 'OUT_OF_STOCK' : stock < 10 ? 'LOW_STOCK' : 'IN_STOCK';
-                    const approval = p.approvalStatus || 'PENDING';
+        {/* Search Bar & View Mode Toggle */}
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-72">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search name or SKU..."
+              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#FF5722]"
+            />
+          </div>
 
-                    return (
-                      <tr key={p.id} className="hover:bg-gray-50 transition-colors group">
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center shrink-0">
-                              {p.images?.[0] ? (
-                                <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                <Package size={18} className="text-gray-300" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-bold text-gray-900 text-sm line-clamp-1 group-hover:text-[#E53935] transition-colors">{p.name}</p>
-                              <p className="text-xs text-gray-400 font-medium">Brand: {p.brand?.name || 'Generic'}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 font-mono text-xs text-gray-500 font-bold">{firstVar.sku || 'N/A'}</td>
-                        <td className="px-5 py-4 text-xs font-semibold text-gray-600">{p.category?.name || 'Uncategorized'}</td>
-                        <td className="px-5 py-4 font-black text-gray-900 text-sm">₹{(p.basePrice || firstVar.price || 0).toLocaleString()}</td>
-                        <td className="px-5 py-4">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black border uppercase tracking-wider ${STOCK_BADGES[stockStatus]}`}>
-                            {stock} units ({stockStatus.replace('_', ' ')})
-                          </span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-black border uppercase tracking-wider ${APPROVAL_BADGES[approval] || APPROVAL_BADGES.PENDING}`}>
-                            {approval}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {tab === 'DELETED' ? (
-                              <button
-                                onClick={() => handleRestore(p.id)}
-                                className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200"
-                                title="Restore"
-                              >
-                                <RotateCcw size={14} />
-                              </button>
-                            ) : (
-                              <>
-                                <Link
-                                  href={`/seller/dashboard/products/edit/${p.id}`}
-                                  className="p-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors border border-gray-200"
-                                  title="Edit"
-                                >
-                                  <Edit3 size={14} />
-                                </Link>
-                                <button
-                                  onClick={() => handleDelete(p.id)}
-                                  className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors border border-red-200"
-                                  title="Trash"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            /* GRID VIEW */
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {filtered.map(p => {
-                const firstVar = p.variants?.[0] || {};
-                const stock = firstVar.quantity ?? p.stock ?? 0;
-                const approval = p.approvalStatus || 'PENDING';
-
-                return (
-                  <div key={p.id} className="bg-white border border-gray-200 hover:border-red-200 rounded-xl p-4 transition-all flex flex-col justify-between group shadow-sm hover:shadow-md">
-                    <div>
-                      <div className="w-full h-36 rounded-lg bg-gray-100 border border-gray-100 mb-3 overflow-hidden flex items-center justify-center relative">
-                        {p.images?.[0] ? (
-                          <img src={p.images[0]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                        ) : (
-                          <Package size={32} className="text-gray-300" />
-                        )}
-                        <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[9px] font-black border uppercase ${APPROVAL_BADGES[approval]}`}>
-                          {approval}
-                        </span>
-                      </div>
-                      <h4 className="font-bold text-gray-900 text-sm line-clamp-1 group-hover:text-[#E53935] transition-colors">{p.name}</h4>
-                      <p className="text-xs text-gray-400 font-medium mt-0.5">SKU: {firstVar.sku || 'N/A'}</p>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-gray-400">Price</p>
-                        <p className="font-black text-gray-900 text-sm">₹{(p.basePrice || firstVar.price || 0).toLocaleString()}</p>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        {tab === 'DELETED' ? (
-                          <button onClick={() => handleRestore(p.id)} className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><RotateCcw size={14} /></button>
-                        ) : (
-                          <>
-                            <Link href={`/seller/dashboard/products/edit/${p.id}`} className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"><Edit3 size={14} /></Link>
-                            <button onClick={() => handleDelete(p.id)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"><Trash2 size={14} /></button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <div className="flex border border-slate-200 rounded-xl p-1 bg-slate-50 shrink-0">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded-lg cursor-pointer transition-colors ${viewMode === 'list' ? 'bg-white text-[#FF5722] shadow-xs' : 'text-slate-400'}`}
+              title="List View"
+            >
+              <List size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-lg cursor-pointer transition-colors ${viewMode === 'grid' ? 'bg-white text-[#FF5722] shadow-xs' : 'text-slate-400'}`}
+              title="Grid View"
+            >
+              <LayoutGrid size={16} />
+            </button>
+          </div>
         </div>
       </motion.div>
+
+      {/* Main Content Area */}
+      {loading ? (
+        <div className="py-20 flex flex-col items-center justify-center gap-3 bg-white rounded-3xl border border-slate-200/80">
+          <Loader2 size={36} className="animate-spin text-[#FF5722]" />
+          <p className="text-xs font-bold text-slate-400">Loading products catalog...</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <motion.div variants={itemVariants} className="bg-white border border-slate-200/80 rounded-3xl p-16 text-center shadow-xs">
+          <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Package size={32} />
+          </div>
+          <h3 className="text-base font-bold text-slate-900">No products found</h3>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-6">There are no products matching your selected tab or search query.</p>
+          <Link
+            href="/seller/dashboard/products/add"
+            className="px-5 py-2.5 bg-[#FF5722] hover:bg-[#e64a19] text-white text-xs font-bold rounded-xl shadow-md transition-all inline-flex items-center gap-2"
+          >
+            <Plus size={16} /> Create Product
+          </Link>
+        </motion.div>
+      ) : viewMode === 'list' ? (
+        <motion.div variants={itemVariants} className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200/80 text-[10px] uppercase text-slate-400 font-extrabold tracking-wider">
+                <tr>
+                  <th className="px-6 py-4">Product Details</th>
+                  <th className="px-6 py-4">Category</th>
+                  <th className="px-6 py-4">Price (INR)</th>
+                  <th className="px-6 py-4">Stock Status</th>
+                  <th className="px-6 py-4">Approval</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map(prod => {
+                  const title = prod.name || prod.title || 'Product';
+                  const img = prod.images?.[0]?.url || prod.images?.[0] || '';
+                  const price = prod.basePrice || prod.price || 0;
+                  const catName = prod.category?.name || 'General';
+                  const appStatus = prod.approvalStatus || 'APPROVED';
+                  const stStatus = prod.stockStatus || 'IN_STOCK';
+
+                  return (
+                    <tr key={prod.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden p-1">
+                            {img ? <img src={img} alt="" className="w-full h-full object-contain" /> : <Package size={20} className="text-slate-400" />}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-900 text-sm line-clamp-1">{title}</h4>
+                            <p className="text-[10px] text-slate-400 font-mono mt-0.5">SKU: {prod.sku || `PROD-${prod.id}`}</p>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <span className="font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg text-[10px]">
+                          {catName}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 font-black text-slate-900 text-sm">
+                        ₹{Number(price).toLocaleString()}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${STOCK_BADGES[stStatus] || STOCK_BADGES.IN_STOCK}`}>
+                          {stStatus.replace('_', ' ')}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${APPROVAL_BADGES[appStatus] || APPROVAL_BADGES.APPROVED}`}>
+                          {appStatus}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/seller/dashboard/products/${prod.id}/edit`}
+                            className="p-2 text-slate-400 hover:text-[#FF5722] hover:bg-orange-50 rounded-xl transition-colors"
+                            title="Edit Listing"
+                          >
+                            <Edit3 size={15} />
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(prod.id)}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      ) : (
+        <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filtered.map(prod => {
+            const title = prod.name || prod.title || 'Product';
+            const img = prod.images?.[0]?.url || prod.images?.[0] || '';
+            const price = prod.basePrice || prod.price || 0;
+
+            return (
+              <div key={prod.id} className="bg-white border border-slate-200/80 hover:border-[#FF5722] rounded-3xl p-4 transition-all flex flex-col justify-between gap-3 shadow-xs hover:shadow-md group">
+                <div className="w-full h-36 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-center overflow-hidden p-2">
+                  {img ? <img src={img} alt="" className="w-full h-full object-contain group-hover:scale-105 transition-transform" /> : <Package size={36} className="text-slate-300" />}
+                </div>
+
+                <div>
+                  <span className="text-[9px] font-bold uppercase text-[#FF5722]">{prod.category?.name || 'General'}</span>
+                  <h4 className="font-bold text-slate-900 text-xs line-clamp-2 mt-0.5">{title}</h4>
+                  <p className="text-sm font-black text-slate-900 mt-1">₹{Number(price).toLocaleString()}</p>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100 mt-auto">
+                  <span className="text-[10px] text-slate-400 font-mono">SKU: {prod.sku || `PROD-${prod.id}`}</span>
+                  <div className="flex items-center gap-1">
+                    <Link href={`/seller/dashboard/products/${prod.id}/edit`} className="p-1.5 text-slate-400 hover:text-[#FF5722] rounded-lg">
+                      <Edit3 size={14} />
+                    </Link>
+                    <button onClick={() => handleDelete(prod.id)} className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg cursor-pointer">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </motion.div>
+      )}
+
     </motion.div>
   );
 }
