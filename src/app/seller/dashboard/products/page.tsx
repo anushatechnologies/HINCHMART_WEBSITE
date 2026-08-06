@@ -46,17 +46,24 @@ export default function VendorProductsPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('seller_token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      if (!token) {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+      const headers = { Authorization: `Bearer ${token}` };
       const res = await fetch(`${API}/products`, { headers });
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
         setProducts(data.data);
       } else {
-        const publicRes = await fetch('http://localhost:5000/api/products?limit=1000');
-        const publicData = await publicRes.json();
-        if (publicData.success && Array.isArray(publicData.data)) {
-          setProducts(publicData.data);
-        }
+        setProducts([]);
       }
     } catch (err) {
       console.error('Fetch error:', err);
