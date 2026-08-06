@@ -4,18 +4,18 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Search, Filter, Package, Trash2, RotateCcw,
-  Edit3, CheckCircle, Clock, Eye, Loader2, UploadCloud,
-  ChevronRight, LayoutGrid, List, AlertTriangle
+  Plus, Search, Filter, Package, Trash2,
+  Edit3, CheckCircle, Clock, Eye, Loader2,
+  ChevronLeft, ChevronRight, LayoutGrid, List, AlertTriangle, X, RefreshCw
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 const APPROVAL_BADGES: Record<string, string> = {
-  DRAFT:            'bg-gray-100 text-gray-600 border-gray-200',
+  DRAFT:            'bg-slate-100 text-slate-600 border-slate-200',
   SUBMITTED:        'bg-blue-100 text-blue-700 border-blue-200',
   UNDER_REVIEW:     'bg-purple-100 text-purple-700 border-purple-200',
-  CHANGES_REQUIRED: 'bg-orange-100 text-orange-700 border-orange-200',
+  CHANGES_REQUIRED: 'bg-amber-100 text-amber-700 border-amber-200',
   APPROVED:         'bg-emerald-100 text-emerald-700 border-emerald-200',
   LIVE:             'bg-emerald-100 text-emerald-700 border-emerald-200',
   PENDING:          'bg-amber-100 text-amber-700 border-amber-200',
@@ -30,8 +30,8 @@ const STOCK_BADGES: Record<string, string> = {
 
 type TabType = 'ALL' | 'ACTIVE' | 'PENDING' | 'DELETED';
 
-const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
-const itemVariants = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } } };
+const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } };
+const itemVariants = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
 
 export default function ProductsHub() {
   const [tab, setTab] = useState<TabType>('ALL');
@@ -39,7 +39,11 @@ export default function ProductsHub() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [vendorId, setVendorId] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
 
   useEffect(() => {
     const info = localStorage.getItem('seller_info');
@@ -51,10 +55,13 @@ export default function ProductsHub() {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const statusParam = tab === 'ALL' ? '' : `&status=${tab}`;
       const token = localStorage.getItem('seller_token');
       const vId = vendorId || 1;
-      
+      let statusParam = '';
+      if (tab === 'ACTIVE') statusParam = '&status=APPROVED';
+      if (tab === 'PENDING') statusParam = '&status=PENDING';
+      if (tab === 'DELETED') statusParam = '&status=DELETED';
+
       const res = await fetch(`${API}/vendors/products?vendorId=${vId}${statusParam}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
@@ -63,7 +70,7 @@ export default function ProductsHub() {
       if (data.success && data.data && data.data.length > 0) {
         setProducts(data.data);
       } else {
-        // Fallback to global products catalog if vendor specific list is empty
+        // Fallback to global catalog
         const globalRes = await fetch(`${API}/products?limit=1000`);
         const globalData = await globalRes.json();
         if (globalData.success && globalData.data) {
@@ -72,7 +79,6 @@ export default function ProductsHub() {
       }
     } catch (e) {
       console.error(e);
-      // Extra fallback
       try {
         const globalRes = await fetch(`${API}/products?limit=1000`);
         const globalData = await globalRes.json();
@@ -86,7 +92,7 @@ export default function ProductsHub() {
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
+    if (!confirm('Are you sure you want to remove this product listing?')) return;
     try {
       const token = localStorage.getItem('seller_token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -101,88 +107,99 @@ export default function ProductsHub() {
   };
 
   const filtered = products.filter(p => {
-    const title = p.name || p.title || '';
-    const sku = p.sku || '';
-    return title.toLowerCase().includes(search.toLowerCase()) || sku.toLowerCase().includes(search.toLowerCase());
+    const title = (p.name || p.title || '').toLowerCase();
+    const sku = (p.sku || p.modelNumber || '').toLowerCase();
+    const brandName = (typeof p.brand === 'object' ? p.brand?.name : p.brand || '').toLowerCase();
+    return title.includes(search.toLowerCase()) || sku.includes(search.toLowerCase()) || brandName.includes(search.toLowerCase());
   });
+
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedProducts = filtered.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6 pb-12 font-sans">
       
-      {/* Top Header & Actions */}
-      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Product Catalog</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Manage your listings, stock levels, and approval status.</p>
+      {/* Top Header & Actions Banner */}
+      <motion.div variants={itemVariants} className="bg-gradient-to-r from-[#0F2537] via-[#1a3852] to-[#0F2537] text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-white/10 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#FF5722]/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 space-y-1">
+          <span className="text-[10px] font-black uppercase text-[#FF5722] bg-orange-500/15 px-3 py-1 rounded-full border border-[#FF5722]/30 tracking-wider">Seller Inventory Control</span>
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">Vendor Product Catalog</h1>
+          <p className="text-slate-300 text-xs sm:text-sm font-medium max-w-lg">Manage your commercial product listings, rental equipment flags, and B2B pricing specifications.</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Link
-            href="/seller/dashboard/products/bulk"
-            className="px-4 py-2.5 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-xl shadow-xs hover:bg-slate-50 transition-all flex items-center gap-2"
+        <div className="relative z-10 flex items-center gap-3">
+          <button 
+            onClick={fetchProducts}
+            className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl border border-white/20 text-xs font-bold transition-all cursor-pointer shadow-xs"
+            title="Refresh Products"
           >
-            <UploadCloud size={16} /> Bulk Upload
-          </Link>
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          </button>
+
           <Link
             href="/seller/dashboard/products/add"
-            className="px-5 py-2.5 bg-gradient-to-r from-[#FF5722] to-[#FF7043] text-white text-xs font-bold rounded-xl shadow-md hover:from-[#e64a19] hover:to-[#ff5722] transition-all flex items-center gap-2"
+            className="px-5 py-3 bg-[#FF5722] hover:bg-[#e64a19] text-white text-xs font-bold rounded-2xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
           >
-            <Plus size={16} /> Add Product
+            <Plus size={18} /> Add New Product
           </Link>
         </div>
       </motion.div>
 
-      {/* Tabs & Search Filter */}
-      <motion.div variants={itemVariants} className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full md:w-auto overflow-x-auto">
-          {[
-            { key: 'ALL', label: '📦 All Products' },
-            { key: 'ACTIVE', label: '✓ Active' },
-            { key: 'PENDING', label: '⏳ Pending Approval' },
-            { key: 'DELETED', label: '🗑️ Trash' },
-          ].map(t => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key as TabType)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                tab === t.key ? 'bg-white text-[#0F2537] shadow-xs' : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Search Bar & View Mode Toggle */}
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-72">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search name or SKU..."
-              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#FF5722]"
-            />
+      {/* Tabs & Search Filter Bar */}
+      <motion.div variants={itemVariants} className="bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-5 shadow-xs space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          
+          {/* Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            {(['ALL', 'ACTIVE', 'PENDING', 'DELETED'] as TabType[]).map(t => (
+              <button
+                key={t}
+                onClick={() => { setTab(t); setCurrentPage(1); }}
+                className={`px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  tab === t
+                    ? 'bg-[#0F2537] text-white shadow-md'
+                    : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-slate-200/60'
+                }`}
+              >
+                {t}
+              </button>
+            ))}
           </div>
 
-          <div className="flex border border-slate-200 rounded-xl p-1 bg-slate-50 shrink-0">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-lg cursor-pointer transition-colors ${viewMode === 'list' ? 'bg-white text-[#FF5722] shadow-xs' : 'text-slate-400'}`}
-              title="List View"
-            >
-              <List size={16} />
-            </button>
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg cursor-pointer transition-colors ${viewMode === 'grid' ? 'bg-white text-[#FF5722] shadow-xs' : 'text-slate-400'}`}
-              title="Grid View"
-            >
-              <LayoutGrid size={16} />
-            </button>
+          {/* Search & Layout Toggle */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1 sm:w-72">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search catalog SKU, title, brand..."
+                value={search}
+                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium focus:outline-none focus:border-[#FF5722] focus:bg-white transition-all"
+              />
+            </div>
+
+            <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200/80">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded-xl text-xs transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white text-[#FF5722] shadow-xs font-bold' : 'text-slate-500'}`}
+                title="Grid View"
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded-xl text-xs transition-all cursor-pointer ${viewMode === 'list' ? 'bg-white text-[#FF5722] shadow-xs font-bold' : 'text-slate-500'}`}
+                title="Table View"
+              >
+                <List size={16} />
+              </button>
+            </div>
           </div>
+
         </div>
       </motion.div>
 
@@ -190,20 +207,18 @@ export default function ProductsHub() {
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center gap-3 bg-white rounded-3xl border border-slate-200/80">
           <Loader2 size={36} className="animate-spin text-[#FF5722]" />
-          <p className="text-xs font-bold text-slate-400">Loading products catalog...</p>
+          <p className="text-xs font-bold text-slate-400">Fetching live catalog products...</p>
         </div>
-      ) : filtered.length === 0 ? (
+      ) : paginatedProducts.length === 0 ? (
         <motion.div variants={itemVariants} className="bg-white border border-slate-200/80 rounded-3xl p-16 text-center shadow-xs">
-          <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Package size={32} />
-          </div>
+          <Package size={40} className="text-slate-300 mx-auto mb-3" />
           <h3 className="text-base font-bold text-slate-900">No products found</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-6">There are no products matching your selected tab or search query.</p>
           <Link
             href="/seller/dashboard/products/add"
-            className="px-5 py-2.5 bg-[#FF5722] hover:bg-[#e64a19] text-white text-xs font-bold rounded-xl shadow-md transition-all inline-flex items-center gap-2"
+            className="px-5 py-2.5 bg-[#FF5722] hover:bg-[#e64a19] text-white text-xs font-bold rounded-2xl shadow-md transition-all inline-flex items-center gap-2 cursor-pointer"
           >
-            <Plus size={16} /> Create Product
+            <Plus size={16} /> Add Product Listing
           </Link>
         </motion.div>
       ) : viewMode === 'list' ? (
@@ -221,7 +236,7 @@ export default function ProductsHub() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map(prod => {
+                {paginatedProducts.map(prod => {
                   const title = prod.name || prod.title || 'Product';
                   const img = prod.images?.[0]?.url || prod.images?.[0] || '';
                   const price = prod.basePrice || prod.price || 0;
@@ -238,7 +253,7 @@ export default function ProductsHub() {
                           </div>
                           <div>
                             <h4 className="font-bold text-slate-900 text-sm line-clamp-1">{title}</h4>
-                            <p className="text-[10px] text-slate-400 font-mono mt-0.5">SKU: {prod.sku || `PROD-${prod.id}`}</p>
+                            <p className="text-[10px] text-slate-400 font-mono mt-0.5">SKU: {prod.modelNumber || prod.sku || `PROD-${prod.id}`}</p>
                           </div>
                         </div>
                       </td>
@@ -277,7 +292,7 @@ export default function ProductsHub() {
                           <button
                             onClick={() => handleDelete(prod.id)}
                             className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
-                            title="Delete"
+                            title="Delete Listing"
                           >
                             <Trash2 size={15} />
                           </button>
@@ -291,16 +306,20 @@ export default function ProductsHub() {
           </div>
         </motion.div>
       ) : (
+        /* GRID VIEW */
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filtered.map(prod => {
+          {paginatedProducts.map(prod => {
             const title = prod.name || prod.title || 'Product';
             const img = prod.images?.[0]?.url || prod.images?.[0] || '';
             const price = prod.basePrice || prod.price || 0;
 
             return (
-              <div key={prod.id} className="bg-white border border-slate-200/80 hover:border-[#FF5722] rounded-3xl p-4 transition-all flex flex-col justify-between gap-3 shadow-xs hover:shadow-md group">
-                <div className="w-full h-36 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-center overflow-hidden p-2">
+              <div key={prod.id} className="bg-white border border-slate-200/80 hover:border-[#FF5722] rounded-3xl p-4 transition-all flex flex-col justify-between gap-3 shadow-xs hover:shadow-lg group">
+                <div className="w-full h-40 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-center overflow-hidden p-2 relative">
                   {img ? <img src={img} alt="" className="w-full h-full object-contain group-hover:scale-105 transition-transform" /> : <Package size={36} className="text-slate-300" />}
+                  {prod.isSameDayDelivery && (
+                    <span className="absolute top-2 left-2 bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">Express</span>
+                  )}
                 </div>
 
                 <div>
@@ -310,12 +329,12 @@ export default function ProductsHub() {
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100 mt-auto">
-                  <span className="text-[10px] text-slate-400 font-mono">SKU: {prod.sku || `PROD-${prod.id}`}</span>
+                  <span className="text-[10px] text-slate-400 font-mono">SKU: {prod.modelNumber || prod.sku || `PROD-${prod.id}`}</span>
                   <div className="flex items-center gap-1">
-                    <Link href={`/seller/dashboard/products/${prod.id}/edit`} className="p-1.5 text-slate-400 hover:text-[#FF5722] rounded-lg">
+                    <Link href={`/seller/dashboard/products/${prod.id}/edit`} className="p-1.5 text-slate-400 hover:text-[#FF5722] hover:bg-orange-50 rounded-lg">
                       <Edit3 size={14} />
                     </Link>
-                    <button onClick={() => handleDelete(prod.id)} className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg cursor-pointer">
+                    <button onClick={() => handleDelete(prod.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -324,6 +343,54 @@ export default function ProductsHub() {
             );
           })}
         </motion.div>
+      )}
+
+      {/* Pagination Bar */}
+      {totalPages > 1 && (
+        <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="text-xs font-semibold text-slate-500">
+            Page <strong className="text-slate-800 font-bold">{currentPage}</strong> of <strong className="text-slate-800 font-bold">{totalPages}</strong> ({totalItems} catalog products)
+          </span>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 transition-all cursor-pointer"
+            >
+              <ChevronLeft size={16} />
+            </button>
+
+            {Array.from({ length: Math.min(5, totalPages) }, (_, idx) => {
+              let pageNum = currentPage;
+              if (currentPage <= 3) pageNum = idx + 1;
+              else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + idx;
+              else pageNum = currentPage - 2 + idx;
+
+              if (pageNum < 1 || pageNum > totalPages) return null;
+
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`w-8 h-8 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                    currentPage === pageNum ? 'bg-[#0F2537] text-white shadow-xs' : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 transition-all cursor-pointer"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
       )}
 
     </motion.div>
