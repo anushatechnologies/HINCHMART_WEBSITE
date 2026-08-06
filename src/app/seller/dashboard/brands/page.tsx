@@ -60,6 +60,7 @@ export default function BrandsHub() {
     name: '',
     manufacturer: '',
     regNo: '',
+    logoUrl: ''
   });
 
   const loadBrands = useCallback(() => {
@@ -99,6 +100,7 @@ export default function BrandsHub() {
       name: newBrand.name,
       manufacturer: newBrand.manufacturer || newBrand.name + ' Enterprise',
       regNo: newBrand.regNo || `TM-${Math.floor(1000 + Math.random() * 9000)}`,
+      logoUrl: newBrand.logoUrl || '',
       status: 'PENDING',
       source: 'SELLER',
       vendorName: sellerName,
@@ -391,6 +393,18 @@ export default function BrandsHub() {
                     placeholder="e.g. TM-9042-2026"
                     className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-mono font-bold text-[#0F2537] outline-none focus:border-[#FF5722]"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#0F2537] uppercase tracking-wider mb-1.5">Brand Logo Image URL</label>
+                  <input
+                    type="text"
+                    value={newBrand.logoUrl}
+                    onChange={e => setNewBrand({ ...newBrand, logoUrl: e.target.value })}
+                    placeholder="https://example.com/logo.png"
+                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-mono text-[#0F2537] outline-none focus:border-[#FF5722]"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Provide a direct image URL for the brand logo.</p>
                 </div>
 
                 <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
