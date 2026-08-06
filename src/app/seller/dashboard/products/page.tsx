@@ -1,150 +1,180 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import {
-  Plus, Search, Filter, Package, Trash2,
-  Edit3, CheckCircle, Clock, Eye, Loader2,
-  ChevronLeft, ChevronRight, LayoutGrid, List, AlertTriangle, X, RefreshCw
+  Package, Plus, Search, Edit3, Trash2, LayoutGrid, List,
+  Zap, Key, CheckCircle, Clock, AlertTriangle, ChevronLeft, ChevronRight, Loader2, RefreshCw
 } from 'lucide-react';
+import Link from 'next/link';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-
-const APPROVAL_BADGES: Record<string, string> = {
-  DRAFT:            'bg-slate-100 text-slate-600 border-slate-200',
-  SUBMITTED:        'bg-blue-100 text-blue-700 border-blue-200',
-  UNDER_REVIEW:     'bg-purple-100 text-purple-700 border-purple-200',
-  CHANGES_REQUIRED: 'bg-amber-100 text-amber-700 border-amber-200',
-  APPROVED:         'bg-emerald-100 text-emerald-700 border-emerald-200',
-  LIVE:             'bg-emerald-100 text-emerald-700 border-emerald-200',
-  PENDING:          'bg-amber-100 text-amber-700 border-amber-200',
-  REJECTED:         'bg-red-100 text-red-700 border-red-200',
-};
-
-const STOCK_BADGES: Record<string, string> = {
-  IN_STOCK:     'bg-emerald-100 text-emerald-700 border-emerald-200',
-  LOW_STOCK:    'bg-amber-100 text-amber-700 border-amber-200',
-  OUT_OF_STOCK: 'bg-red-100 text-red-700 border-red-200',
-};
+const API = 'http://localhost:5000/api/vendors';
 
 type TabType = 'ALL' | 'ACTIVE' | 'PENDING' | 'DELETED';
 
-const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } };
-const itemVariants = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
+const APPROVAL_BADGES: Record<string, string> = {
+  APPROVED: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  LIVE: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  PENDING: 'bg-amber-100 text-amber-800 border-amber-300',
+  UNDER_REVIEW: 'bg-amber-100 text-amber-800 border-amber-300',
+  DRAFT: 'bg-slate-100 text-slate-700 border-slate-300',
+  REJECTED: 'bg-red-100 text-red-800 border-red-300'
+};
 
-export default function ProductsHub() {
-  const [tab, setTab] = useState<TabType>('ALL');
-  const [search, setSearch] = useState('');
+const STOCK_BADGES: Record<string, string> = {
+  IN_STOCK: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  LOW_STOCK: 'bg-amber-50 text-amber-700 border-amber-200',
+  OUT_OF_STOCK: 'bg-red-50 text-red-700 border-red-200'
+};
+
+export default function VendorProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [vendorId, setVendorId] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
+  const [search, setSearch] = useState('');
+  const [tab, setTab] = useState<TabType>('ALL');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Pagination State
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
   useEffect(() => {
-    const info = localStorage.getItem('seller_info');
-    if (info) {
-      try { setVendorId(JSON.parse(info).id); } catch {}
-    }
+    fetchProducts();
   }, []);
 
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('seller_token');
-      const vId = vendorId || 1;
-      let statusParam = '';
-      if (tab === 'ACTIVE') statusParam = '&status=APPROVED';
-      if (tab === 'PENDING') statusParam = '&status=PENDING';
-      if (tab === 'DELETED') statusParam = '&status=DELETED';
-
-      const res = await fetch(`${API}/vendors/products?vendorId=${vId}${statusParam}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`${API}/products`, { headers });
       const data = await res.json();
-      
-      if (data.success && data.data && data.data.length > 0) {
+      if (data.success && Array.isArray(data.data)) {
         setProducts(data.data);
       } else {
-        // Fallback to global catalog
-        const globalRes = await fetch(`${API}/products?limit=1000`);
-        const globalData = await globalRes.json();
-        if (globalData.success && globalData.data) {
-          setProducts(globalData.data);
+        const publicRes = await fetch('http://localhost:5000/api/products?limit=1000');
+        const publicData = await publicRes.json();
+        if (publicData.success && Array.isArray(publicData.data)) {
+          setProducts(publicData.data);
         }
       }
-    } catch (e) {
-      console.error(e);
-      try {
-        const globalRes = await fetch(`${API}/products?limit=1000`);
-        const globalData = await globalRes.json();
-        if (globalData.success && globalData.data) setProducts(globalData.data);
-      } catch {}
+    } catch (err) {
+      console.error('Fetch error:', err);
     } finally {
       setLoading(false);
     }
-  }, [vendorId, tab]);
-
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to remove this product listing?')) return;
+    if (!confirm('Are you sure you want to delete this product?')) return;
     try {
       const token = localStorage.getItem('seller_token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetch(`${API}/vendors/products/${id}`, { method: 'DELETE', headers });
-      if (!res.ok) {
-        await fetch(`${API}/products/${id}`, { method: 'DELETE', headers });
-      }
+      await fetch(`${API}/products/${id}`, { method: 'DELETE', headers });
       setProducts(prev => prev.filter(p => p.id !== id));
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error('Delete failed', err);
+      setProducts(prev => prev.filter(p => p.id !== id));
     }
   };
 
-  const filtered = products.filter(p => {
+  // Filtering
+  const filteredProducts = products.filter(p => {
     const title = (p.name || p.title || '').toLowerCase();
-    const sku = (p.sku || p.modelNumber || '').toLowerCase();
-    const brandName = (typeof p.brand === 'object' ? p.brand?.name : p.brand || '').toLowerCase();
-    return title.includes(search.toLowerCase()) || sku.includes(search.toLowerCase()) || brandName.includes(search.toLowerCase());
+    const sku = (p.modelNumber || p.sku || '').toLowerCase();
+    const brand = (p.brand || '').toLowerCase();
+    const matchesSearch = title.includes(search.toLowerCase()) || sku.includes(search.toLowerCase()) || brand.includes(search.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (tab === 'ACTIVE') return p.approvalStatus === 'APPROVED' || p.approvalStatus === 'LIVE';
+    if (tab === 'PENDING') return p.approvalStatus === 'PENDING' || p.approvalStatus === 'UNDER_REVIEW' || p.approvalStatus === 'DRAFT';
+    if (tab === 'DELETED') return p.deletedAt !== null || p.isActive === false;
+
+    return true;
   });
 
-  const totalItems = filtered.length;
+  // Pagination Calculation
+  const totalItems = filteredProducts.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedProducts = filtered.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+
+  const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.05 } } };
+  const itemVariants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6 pb-12 font-sans">
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6 pb-12">
       
-      {/* Top Header & Actions Banner */}
-      <motion.div variants={itemVariants} className="bg-gradient-to-r from-[#0F2537] via-[#1a3852] to-[#0F2537] text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-white/10 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#FF5722]/20 rounded-full blur-3xl pointer-events-none" />
+      {/* Top Banner & Header Actions */}
+      <motion.div variants={itemVariants} className="bg-gradient-to-r from-[#0F2537] via-[#1a3852] to-[#0F2537] text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-white/10 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-[#FF5722]/20 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 space-y-1">
-          <span className="text-[10px] font-black uppercase text-[#FF5722] bg-orange-500/15 px-3 py-1 rounded-full border border-[#FF5722]/30 tracking-wider">Seller Inventory Control</span>
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">Vendor Product Catalog</h1>
-          <p className="text-slate-300 text-xs sm:text-sm font-medium max-w-lg">Manage your commercial product listings, rental equipment flags, and B2B pricing specifications.</p>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase text-[#FF5722] bg-orange-500/15 px-3 py-1 rounded-full border border-[#FF5722]/30 tracking-wider">Vendor Inventory Hub</span>
+            <span className="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-0.5 rounded-full font-bold">{products.length} Products Loaded</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Seller Product Catalog</h1>
+          <p className="text-slate-300 text-xs sm:text-sm font-medium">Manage corporate listings, rental equipment rates, price updates, and stock availability.</p>
         </div>
 
-        <div className="relative z-10 flex items-center gap-3">
-          <button 
+        <div className="relative z-10 flex items-center gap-3 shrink-0">
+          <button
             onClick={fetchProducts}
-            className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl border border-white/20 text-xs font-bold transition-all cursor-pointer shadow-xs"
-            title="Refresh Products"
+            className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-2xl border border-white/20 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs"
+            title="Refresh List"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
-
           <Link
             href="/seller/dashboard/products/add"
-            className="px-5 py-3 bg-[#FF5722] hover:bg-[#e64a19] text-white text-xs font-bold rounded-2xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+            className="px-5 py-2.5 bg-[#FF5722] hover:bg-[#e64a19] text-white text-xs font-black rounded-2xl shadow-lg hover:shadow-orange-500/30 transition-all flex items-center gap-2 cursor-pointer"
           >
-            <Plus size={18} /> Add New Product
+            <Plus size={16} /> Add Product Listing
           </Link>
+        </div>
+      </motion.div>
+
+      {/* Metric Cards Summary */}
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Listings</p>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">{products.length}</h3>
+          </div>
+          <div className="w-10 h-10 rounded-2xl bg-orange-50 text-[#FF5722] border border-orange-100 flex items-center justify-center font-bold">
+            <Package size={20} />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Active Approved</p>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">{products.filter(p => p.approvalStatus === 'APPROVED' || p.approvalStatus === 'LIVE').length}</h3>
+          </div>
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold">
+            <CheckCircle size={20} />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Pending Review</p>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">{products.filter(p => p.approvalStatus === 'PENDING' || p.approvalStatus === 'UNDER_REVIEW' || p.approvalStatus === 'DRAFT').length}</h3>
+          </div>
+          <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center font-bold">
+            <Clock size={20} />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Rentable Machinery</p>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">{products.filter(p => p.isRentable).length}</h3>
+          </div>
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-bold">
+            <Key size={20} />
+          </div>
         </div>
       </motion.div>
 
@@ -284,17 +314,17 @@ export default function ProductsHub() {
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             href={`/seller/dashboard/products/${prod.id}/edit`}
-                            className="p-2 text-slate-400 hover:text-[#FF5722] hover:bg-orange-50 rounded-xl transition-colors"
+                            className="px-3 py-1.5 bg-[#0F2537] hover:bg-[#FF5722] text-white rounded-xl text-[11px] font-extrabold transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-xs hover:shadow-orange-500/25 hover:shadow-lg"
                             title="Edit Listing"
                           >
-                            <Edit3 size={15} />
+                            <Edit3 size={13} /> Edit
                           </Link>
                           <button
                             onClick={() => handleDelete(prod.id)}
-                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                            className="px-3 py-1.5 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white border border-red-200/80 rounded-xl text-[11px] font-extrabold transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-xs hover:shadow-red-500/20 hover:shadow-md"
                             title="Delete Listing"
                           >
-                            <Trash2 size={15} />
+                            <Trash2 size={13} /> Delete
                           </button>
                         </div>
                       </td>
@@ -330,12 +360,18 @@ export default function ProductsHub() {
 
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100 mt-auto">
                   <span className="text-[10px] text-slate-400 font-mono">SKU: {prod.modelNumber || prod.sku || `PROD-${prod.id}`}</span>
-                  <div className="flex items-center gap-1">
-                    <Link href={`/seller/dashboard/products/${prod.id}/edit`} className="p-1.5 text-slate-400 hover:text-[#FF5722] hover:bg-orange-50 rounded-lg">
-                      <Edit3 size={14} />
+                  <div className="flex items-center gap-2">
+                    <Link 
+                      href={`/seller/dashboard/products/${prod.id}/edit`} 
+                      className="px-3 py-1.5 bg-[#0F2537] hover:bg-[#FF5722] text-white rounded-xl text-[11px] font-extrabold transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-xs hover:shadow-orange-500/25 hover:shadow-lg"
+                    >
+                      <Edit3 size={13} /> Edit
                     </Link>
-                    <button onClick={() => handleDelete(prod.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer">
-                      <Trash2 size={14} />
+                    <button 
+                      onClick={() => handleDelete(prod.id)} 
+                      className="px-3 py-1.5 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white border border-red-200/80 rounded-xl text-[11px] font-extrabold transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-xs hover:shadow-red-500/20 hover:shadow-md"
+                    >
+                      <Trash2 size={13} /> Delete
                     </button>
                   </div>
                 </div>
