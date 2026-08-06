@@ -654,7 +654,7 @@ export default function HinchMartSupplierLanding() {
               Create Seller Account Now <ArrowRight size={16} />
             </Link>
             <a
-              href="mailto:sell@hinchmart.com"
+              href="mailto:supplier@hinchmart.com"
               className="px-8 py-4 bg-white text-[#0F2537] hover:bg-slate-100 font-bold text-sm rounded-2xl shadow-md transition-all"
             >
               Contact Sales Desk
@@ -703,7 +703,7 @@ export default function HinchMartSupplierLanding() {
             </div>
             <div>
               <h4 className="font-black text-white text-sm mb-4">Contact</h4>
-              <p className="text-slate-300 font-medium mb-1">Email: sell@hinchmart.com</p>
+              <p className="text-slate-300 font-medium mb-1">Email: supplier@hinchmart.com</p>
               <p className="text-slate-300 font-medium mb-1">Helpline: +91 8388899999</p>
               <p className="text-slate-400 text-[11px] mt-2">HinchMart Internet India Pvt Ltd.</p>
             </div>

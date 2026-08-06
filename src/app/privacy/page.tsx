@@ -65,7 +65,7 @@ export default function PrivacyPage() {
         <p>We may update this Privacy Policy from time to time. The updated version will be posted on this page with a revised effective date.</p>
 
         <h2>14. Contact Us</h2>
-        <p><strong>Company:</strong> Anusha Bazaar Technologies Pvt. Ltd.<br /><strong>App:</strong> HINCHMART<br /><strong>Email:</strong> <a href="mailto:support@hinchmart.com">support@hinchmart.com</a><br /><strong>Website:</strong> <a href="https://hinchmart.com" target="_blank" rel="noreferrer">https://hinchmart.com</a></p>
+        <p><strong>Company:</strong> Anusha Bazaar Technologies Pvt. Ltd.<br /><strong>App:</strong> HINCHMART<br /><strong>Support Email:</strong> <a href="mailto:support@hinchmart.com">support@hinchmart.com</a><br /><strong>Legal & Privacy Email:</strong> <a href="mailto:legal@hinchmart.com">legal@hinchmart.com</a><br /><strong>Website:</strong> <a href="https://hinchmart.com" target="_blank" rel="noreferrer">https://hinchmart.com</a></p>
 
         <p className="text-sm text-slate-500 mt-10">© 2026 Anusha Bazaar Technologies Pvt. Ltd. All rights reserved.</p>
       </div>
