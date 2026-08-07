@@ -37,7 +37,11 @@ export default function HeroSlider({ banners, API }: { banners: Banner[]; API: s
 
   const resolveUrl = (url?: string | null) => {
     if (!url) return null;
-    return url.startsWith("http") ? url : `${API}${url}`;
+    let fullUrl = url.startsWith("http") ? url : `${API}${url}`;
+    if (fullUrl.startsWith("http://api.hinchmart.com")) {
+      fullUrl = fullUrl.replace("http://api.hinchmart.com", "https://api.hinchmart.com");
+    }
+    return fullUrl;
   };
 
   return (
