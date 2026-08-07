@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import HeroSlider from '../components/layout/HeroSlider';
 import Phase2DealsSection from '../components/banners/Phase2DealsSection';
+import Phase3AdvancedSection from '../components/banners/Phase3AdvancedSection';
 
 const API = 'http://localhost:5000';
 
@@ -312,6 +313,9 @@ export default async function Home() {
             })}
           </div>
         </section>
+
+        {/* ─── 5.5. PHASE 3 AI RECOMMENDATIONS, INTERACTIVE ESTIMATOR & VIDEO DEMO ─── */}
+        <Phase3AdvancedSection />
 
         {/* ─── 5.5. SUPPLIER REGISTRATION BANNER ─── */}
         <section className="bg-gradient-to-r from-[#0F2537] via-[#1a3852] to-[#FF5722] text-white rounded-3xl p-8 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border border-white/10 relative overflow-hidden">
