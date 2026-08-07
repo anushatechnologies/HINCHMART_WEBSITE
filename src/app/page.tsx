@@ -309,6 +309,30 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* ─── 5.5. SUPPLIER REGISTRATION BANNER ─── */}
+        <section className="bg-gradient-to-r from-[#0F2537] via-[#1a3852] to-[#FF5722] text-white rounded-3xl p-8 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border border-white/10 relative overflow-hidden">
+          <div className="space-y-3 max-w-2xl relative z-10">
+            <span className="text-[10px] font-black uppercase tracking-widest bg-orange-500/20 text-orange-300 border border-orange-500/30 px-3 py-1 rounded-full">
+              Sell on HinchMart
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-black text-white leading-tight">
+              Become a Supplier • <span className="text-amber-300">0% Commission</span>
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-200 font-medium leading-relaxed">
+              Join 10 Lakh+ verified manufacturers and distributors selling industrial materials, steel, cement & tools directly to corporate buyers pan-India.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4 relative z-10 shrink-0">
+            <Link
+              href="/seller"
+              className="px-7 py-3.5 bg-white text-[#0F2537] font-black text-sm uppercase tracking-wider rounded-2xl shadow-xl hover:bg-orange-50 transition-all hover:scale-105"
+            >
+              Start Selling Free
+            </Link>
+          </div>
+        </section>
+
         {/* ─── 6. WHY HINCHMART? ─── */}
         <section className="bg-gradient-to-r from-[#0F2537] via-[#1a3852] to-[#0F2537] text-white rounded-3xl p-8 shadow-xl border border-white/10">
           <div className="text-center max-w-xl mx-auto mb-8">

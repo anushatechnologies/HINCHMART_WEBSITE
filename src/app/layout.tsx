@@ -22,6 +22,8 @@ export const metadata: Metadata = {
   keywords: ["B2B Marketplace", "Construction Materials", "Industrial Hardware", "Procurement", "Wholesale", "India", "Bulk Orders", "GST Invoice"],
 };
 
+import AnnouncementBar from '../components/layout/AnnouncementBar';
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -32,6 +34,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
 
         <ConditionalUI>
+          <AnnouncementBar />
           {/* ── Top Utility Bar ── */}
           <div className="bg-[#1a1a2e] text-white text-xs py-2 hidden md:block">
             <div className="max-w-[1400px] mx-auto px-4 flex justify-between items-center">
