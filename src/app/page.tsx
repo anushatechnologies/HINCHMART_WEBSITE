@@ -5,6 +5,7 @@ import {
   Sun, ChevronRight, CheckCircle2, Truck, Percent, Sparkles, FileText, Smartphone, Star
 } from 'lucide-react';
 import HeroSlider from '../components/layout/HeroSlider';
+import Phase2DealsSection from '../components/banners/Phase2DealsSection';
 
 const API = 'http://localhost:5000';
 
@@ -252,6 +253,9 @@ export default async function Home() {
             ))}
           </div>
         </section>
+
+        {/* ─── 4.5. PHASE 2 FESTIVAL, COUPON, FINANCE & CLEARANCE DEALS ─── */}
+        <Phase2DealsSection />
 
         {/* ─── 5. TRENDING PRODUCTS (Live from DB) ─── */}
         <section className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm">
