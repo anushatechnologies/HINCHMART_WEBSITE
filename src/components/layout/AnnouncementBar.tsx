@@ -18,7 +18,8 @@ export default function AnnouncementBar() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/banners?bannerType=ANNOUNCEMENT&isActive=true')
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
+    fetch(`${apiUrl}/api/banners?bannerType=ANNOUNCEMENT&isActive=true`)
       .then(r => r.json())
       .then(json => {
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {

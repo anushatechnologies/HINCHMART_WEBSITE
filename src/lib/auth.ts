@@ -5,7 +5,7 @@
  * replacement for `fetch()` that silently refreshes access tokens on expiry.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || (process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api` : 'https://api.hinchmart.com/api');
 
 const ACCESS_KEY = 'seller_token';
 const REFRESH_KEY = 'seller_refresh_token';
