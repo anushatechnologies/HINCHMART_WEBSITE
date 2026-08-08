@@ -186,8 +186,9 @@ export default function RegisterPage() {
         const result = await signInWithPopup(auth, googleProvider);
         const token = await result.user.getIdToken();
         
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
         // Post to backend to verify and create user
-        const res = await fetch('http://localhost:5000/api/auth/verify-firebase', {
+        const res = await fetch(`${apiUrl}/api/auth/verify-firebase`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -207,7 +208,7 @@ export default function RegisterPage() {
           const guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]');
           if (guestCart.length > 0) {
             try {
-              await fetch('http://localhost:5000/api/cart/sync', {
+              await fetch(`${apiUrl}/api/cart/sync`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.data.token}` },
                 body: JSON.stringify({ items: guestCart })

@@ -8,7 +8,7 @@ import HeroSlider from '../components/layout/HeroSlider';
 import Phase2DealsSection from '../components/banners/Phase2DealsSection';
 import Phase3AdvancedSection from '../components/banners/Phase3AdvancedSection';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 type Category = {
   id: number | string;
@@ -54,7 +54,7 @@ async function fetchData() {
 
     return {
       categories: categories || [],
-      banners: (banners || []).filter((b) => b.position === 'HERO' && b.isActive !== false),
+      banners: (banners || []).filter((b: any) => (b.position === 'HOMEPAGE_TOP' || b.position === 'HERO' || b.bannerType === 'HERO_SLIDER') && b.isActive !== false),
       products: products || [],
       brands: brands || [],
     };

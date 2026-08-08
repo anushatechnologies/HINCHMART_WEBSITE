@@ -36,8 +36,8 @@ export default function VerifyOTP() {
     }
 
     try {
-      // Typically we'd pull the contactEmail or contactPhone from URL params or local storage
-      const res = await fetch('http://localhost:5000/api/vendors/verify-otp', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
+      const res = await fetch(`${apiUrl}/api/vendors/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ otp: otpString, contactEmail: 'test@example.com' }) // Hardcoded for MVP flow

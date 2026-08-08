@@ -104,7 +104,8 @@ export default function LoginFlow() {
 
   const syncWithBackend = async (idToken: string) => {
     try {
-      const res = await fetch("http://localhost:5000/api/auth/verify-firebase", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
+      const res = await fetch(`${apiUrl}/api/auth/verify-firebase`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 

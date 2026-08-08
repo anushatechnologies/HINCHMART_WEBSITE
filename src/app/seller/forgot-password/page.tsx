@@ -17,8 +17,8 @@ export default function ForgotPassword() {
     setLoading(true);
     setMessage('');
 
-    try {
-      const res = await fetch('http://localhost:5000/api/vendors/forgot-password', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
+      const res = await fetch(`${apiUrl}/api/vendors/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contactEmail: email })

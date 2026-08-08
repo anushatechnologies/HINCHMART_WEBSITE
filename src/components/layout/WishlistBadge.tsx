@@ -16,7 +16,8 @@ export default function WishlistBadge() {
         return;
       }
 
-      fetch('http://localhost:5000/api/wishlist', {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
+      fetch(`${API_BASE}/api/wishlist`, {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(r => r.json())
