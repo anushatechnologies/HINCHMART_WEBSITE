@@ -210,17 +210,19 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
 
       {/* ─── LEFT SIDEBAR (STATIC ON DESKTOP, SLIDE-OVER ON MOBILE) ─── */}
       <aside className={`
-        fixed lg:static inset-y-0 left-0 z-50 w-[240px] h-full bg-[#0F2537] flex flex-col text-white shrink-0
-        transition-transform duration-200 ease-in-out border-r border-white/10
+        fixed lg:static inset-y-0 left-0 z-50 w-[245px] h-full bg-[#0A111E] flex flex-col text-white shrink-0
+        transition-transform duration-200 ease-in-out border-r border-slate-800/80
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* Official Brand Logo Header */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-white/10 shrink-0">
-          <Link href="/seller/dashboard" prefetch={true} className="flex items-center gap-2">
-            <div className="bg-white p-1 rounded-xl shadow-md flex items-center justify-center">
-              <img src="/logo.png" alt="HinchMart" className="h-7 w-auto max-w-[120px] object-contain" />
+        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800/80 shrink-0 bg-[#0B1426]/60 backdrop-blur-md">
+          <Link href="/seller/dashboard" prefetch={true} className="flex items-center gap-2.5">
+            <div className="bg-white p-1.5 rounded-xl shadow-lg shadow-black/20 flex items-center justify-center border border-white/20">
+              <img src="/logo.png" alt="HinchMart" className="h-7 w-auto max-w-[125px] object-contain" />
             </div>
-            <span className="text-[10px] font-black uppercase text-[#FF5722] bg-orange-500/10 px-1.5 py-0.5 rounded border border-[#FF5722]/20">Seller</span>
+            <span className="text-[10px] font-black uppercase text-[#FF5722] bg-[#FF5722]/10 px-2 py-0.5 rounded-md border border-[#FF5722]/30 tracking-wider shadow-xs">
+              Seller
+            </span>
           </Link>
           <button className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10" onClick={() => setSidebarOpen(false)}>
             <X size={18} />
@@ -228,15 +230,15 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
         </div>
 
         {/* Seller profile card */}
-        <div className="px-3 py-3 border-b border-white/10 shrink-0">
-          <Link href="/seller/dashboard/profile" className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/[0.06] border border-white/10 hover:bg-white/10 transition-colors group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF5722] to-[#FF7043] flex items-center justify-center text-white text-xs font-black shrink-0 shadow-md shadow-orange-500/20">
+        <div className="px-3 py-3.5 border-b border-slate-800/80 shrink-0 bg-[#0B1426]/40">
+          <Link href="/seller/dashboard/profile" className="flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] transition-all group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF5722] to-[#FF8A65] flex items-center justify-center text-white text-xs font-black shrink-0 shadow-md shadow-orange-500/20 border border-white/20">
               {initials}
             </div>
-            <div className="min-w-0">
-              <p className="text-white text-xs font-bold truncate group-hover:text-[#FF7043] transition-colors">{sellerName}</p>
-              <p className="text-emerald-400 text-[10px] font-bold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse inline-block" />Verified Seller
+            <div className="min-w-0 flex-1">
+              <p className="text-white text-xs font-black truncate group-hover:text-[#FF8A65] transition-colors">{sellerName}</p>
+              <p className="text-[#00E676] text-[10px] font-extrabold flex items-center gap-1 mt-0.5">
+                <span className="w-1.5 h-1.5 bg-[#00E676] rounded-full animate-pulse inline-block shadow-xs" />Verified Seller
               </p>
             </div>
           </Link>
@@ -245,9 +247,12 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
         {/* Independent Scrollable Navigation Bar */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20">
           {NAV_GROUPS.map(group => (
-            <div key={group.label}>
-              <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] px-3 mb-2">{group.label}</p>
-              <div className="space-y-0.5">
+            <div key={group.label} className="space-y-1">
+              <div className="flex items-center gap-2 px-3 mb-1.5">
+                <span className="w-1 h-3 rounded-full bg-[#FF5722]" />
+                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.18em]">{group.label}</p>
+              </div>
+              <div className="space-y-1">
                 {group.items.map(item => {
                   const isActive = item.href === '/seller/dashboard'
                     ? pathname === '/seller/dashboard'
@@ -261,10 +266,10 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
         </nav>
 
         {/* Bottom Logout Action */}
-        <div className="px-3 py-3 border-t border-white/10 shrink-0">
+        <div className="px-3 py-3.5 border-t border-slate-800/80 shrink-0 bg-[#0B1426]/60 backdrop-blur-md">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-slate-300 hover:text-[#FF5722] hover:bg-orange-500/10 text-xs font-bold transition-all cursor-pointer"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-slate-300 hover:text-red-400 hover:bg-red-500/10 text-xs font-bold transition-all cursor-pointer"
           >
             <LogOut size={15} /> Logout Account
           </button>
@@ -275,7 +280,7 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
         
         {/* World-Class Enterprise Navigation Bar (Sticky Top Bar) */}
-        <header className="h-16 bg-gradient-to-r from-[#0F2537] via-[#0B1E36] to-[#0F2537] border-b border-white/10 flex items-center justify-between px-4 sm:px-6 shrink-0 shadow-md text-white sticky top-0 z-30 backdrop-blur-md">
+        <header className="h-16 bg-gradient-to-r from-[#0B132B] via-[#0F2537] to-[#1C2541] border-b border-slate-800/80 flex items-center justify-between px-4 sm:px-6 shrink-0 shadow-xl text-white sticky top-0 z-30 backdrop-blur-md">
           
           {/* Left Controls: Hamburger + Breadcrumbs */}
           <div className="flex items-center gap-4">
