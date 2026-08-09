@@ -7,6 +7,10 @@ import Link from 'next/link';
 interface CartItem {
   id: number;
   quantity: number;
+  isRental?: boolean;
+  rentalStart?: string;
+  rentalEnd?: string;
+  operatorRequired?: boolean;
   variant: {
     id: number;
     sku: string;

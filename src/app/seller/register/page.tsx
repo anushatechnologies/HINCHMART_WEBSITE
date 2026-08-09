@@ -193,8 +193,7 @@ export default function SellerRegister() {
 
     setLoading(true); setError('');
     try {
-      const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
-      const res = await fetch(`${API}/api/vendors/register`, {
+      const res = await fetch('/api/seller/auth/register', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });

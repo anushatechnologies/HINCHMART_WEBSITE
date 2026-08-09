@@ -10,7 +10,7 @@ import {
   ArrowRight, Award, Lock, Sparkles, Building2, Package, Users, Globe,
   FileText, Clock, BarChart3, AlertCircle, X, LayoutDashboard, ChevronDown,
   Layers, Factory, Tag, Wrench, Shield, MessageSquare, Check, ArrowUpRight,
-  Monitor, RefreshCcw, PieChart, Volume2, Search, Filter, Tool, Menu
+  Monitor, RefreshCcw, PieChart, Volume2, Search, Filter, Menu
 } from 'lucide-react';
 
 export default function HinchMartSupplierLanding() {

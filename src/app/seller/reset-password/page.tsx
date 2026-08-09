@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { KeyRound, ArrowRight, CheckCircle } from 'lucide-react';
+import { KeyRound, ArrowRight, CheckCircle, Loader2 } from 'lucide-react';
 
-export default function ResetPassword() {
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -35,6 +35,7 @@ export default function ResetPassword() {
     }
 
     try {
+      setLoading(true);
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
       const res = await fetch(`${apiUrl}/api/vendors/reset-password`, {
         method: 'POST',
@@ -51,7 +52,7 @@ export default function ResetPassword() {
         setIsSuccess(false);
         setMessage(data.message || 'Error resetting password');
       }
-    } catch (err) {
+    } catch {
       setIsSuccess(false);
       setMessage('An error occurred. Please try again.');
     } finally {
@@ -164,5 +165,17 @@ export default function ResetPassword() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPassword() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Loader2 className="animate-spin text-slate-400" size={28} />
+      </div>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

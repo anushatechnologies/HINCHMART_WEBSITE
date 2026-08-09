@@ -167,7 +167,7 @@ export default function BrandsHub() {
 
     setSaving(false);
     setIsModalOpen(false);
-    setNewBrand({ name: '', manufacturer: '', regNo: '' });
+    setNewBrand({ name: '', manufacturer: '', regNo: '', logoUrl: '' });
     setToastMessage(`Brand "${createdItem.name}" submitted for admin approval! Status: PENDING`);
     setTimeout(() => setToastMessage(''), 5000);
   };

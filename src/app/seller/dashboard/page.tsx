@@ -14,12 +14,12 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts';
 
-const STATUS_CONFIG: Record<string, { bg: string; text: string; dot: string; label: string }> = {
-  PENDING:    { bg: 'bg-amber-50 text-amber-700 border-amber-200',   dot: 'bg-amber-500',   label: 'Action Required' },
-  PROCESSING: { bg: 'bg-blue-50 text-blue-700 border-blue-200',     dot: 'bg-blue-500',    label: 'Packing & Ready' },
-  SHIPPED:    { bg: 'bg-[#0F2537]/10 text-[#0F2537] border-[#0F2537]/20', dot: 'bg-[#0F2537]', label: 'In Transit' },
-  DELIVERED:  { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', label: 'Completed' },
-  CANCELLED:  { bg: 'bg-red-50 text-red-700 border-red-200',       dot: 'bg-red-500',     label: 'Cancelled' },
+const STATUS_CONFIG: Record<string, { bg: string; text?: string; dot: string; label: string }> = {
+  PENDING:    { bg: 'bg-amber-50 text-amber-700 border-amber-200', text: 'text-amber-700', dot: 'bg-amber-500',   label: 'Action Required' },
+  PROCESSING: { bg: 'bg-blue-50 text-blue-700 border-blue-200', text: 'text-blue-700', dot: 'bg-blue-500',    label: 'Packing & Ready' },
+  SHIPPED:    { bg: 'bg-[#0F2537]/10 text-[#0F2537] border-[#0F2537]/20', text: 'text-[#0F2537]', dot: 'bg-[#0F2537]', label: 'In Transit' },
+  DELIVERED:  { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', text: 'text-emerald-700', dot: 'bg-emerald-500', label: 'Completed' },
+  CANCELLED:  { bg: 'bg-red-50 text-red-700 border-red-200', text: 'text-red-700', dot: 'bg-red-500',     label: 'Cancelled' },
 };
 
 const containerVariants = {

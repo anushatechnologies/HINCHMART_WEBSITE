@@ -61,7 +61,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({ 
             vendorId, 
             productType,
-            categoryId: formData.categoryId || 1 // fallback for now
+            categoryId: (formData as any).categoryId || 1 // fallback for now
           })
         });
         const data = await res.json();
