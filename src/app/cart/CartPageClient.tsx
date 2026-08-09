@@ -44,7 +44,7 @@ export default function CartPageClient() {
       return;
     }
     try {
-      const res = await fetch('http://localhost:5000/api/cart', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/cart`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -90,7 +90,7 @@ export default function CartPageClient() {
       }
 
       try {
-        const res = await fetch(`http://localhost:5000/api/cart/items/${itemId}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/cart/items/${itemId}`, {
           method: 'PUT',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -123,7 +123,7 @@ export default function CartPageClient() {
       }
 
       try {
-        const res = await fetch(`http://localhost:5000/api/cart/items/${itemId}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/cart/items/${itemId}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -148,14 +148,14 @@ export default function CartPageClient() {
       }
       try {
         // 1. Add to Wishlist
-        await fetch('http://localhost:5000/api/wishlist', {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/wishlist`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ productId })
         });
         
         // 2. Remove from Cart
-        const res = await fetch(`http://localhost:5000/api/cart/items/${itemId}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/cart/items/${itemId}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -214,7 +214,7 @@ export default function CartPageClient() {
     if (!couponCode) return;
 
     try {
-      const res = await fetch('http://localhost:5000/api/coupons/validate', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/coupons/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: couponCode, subtotal })

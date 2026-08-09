@@ -10,9 +10,8 @@ export default function Step3BasicInfo() {
   const [brands, setBrands] = useState<any[]>([]);
   const [loadingBrands, setLoadingBrands] = useState(true);
 
-  useEffect(() => {
-    // 100% PostgreSQL API-based: Fetch brands from backend GET /api/brands
-    fetch('http://localhost:5000/api/brands')
+    const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
+    fetch(`${API}/api/brands`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.data) {

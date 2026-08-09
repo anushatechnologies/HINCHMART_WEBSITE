@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BookMarked, Plus, Edit, Trash2, Eye } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 const CATEGORIES = ['TOOLS', 'ELECTRICAL', 'PLUMBING', 'SAFETY', 'HOME', 'GENERAL'];
 const emptyForm = { title: '', slug: '', summary: '', content: '', imageUrl: '', category: '', published: true };

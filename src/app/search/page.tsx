@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Filter, Search as SearchIcon, SlidersHorizontal, Package, ChevronRight, Check } from 'lucide-react';
 import MiniWishlistButton from '../../components/MiniWishlistButton';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 function SearchResults() {
   const searchParams = useSearchParams();

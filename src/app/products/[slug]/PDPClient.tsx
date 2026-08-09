@@ -38,7 +38,7 @@ export default function PDPClient({ product }: PDPClientProps) {
 
   useEffect(() => {
     if (product?.id) {
-      fetch(`http://localhost:5000/api/products/${product.id}/reviews`)
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/products/${product.id}/reviews`)
         .then(r => r.json())
         .then(data => {
           if (data.success) {
@@ -54,7 +54,7 @@ export default function PDPClient({ product }: PDPClientProps) {
         const gw = JSON.parse(localStorage.getItem('guestWishlist') || '[]');
         setIsInWishlist(gw.some((i: any) => i.productId === product.id));
       } else {
-        fetch('http://localhost:5000/api/wishlist', {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/wishlist`, {
           headers: { Authorization: `Bearer ${token}` }
         })
           .then(r => r.json())
@@ -105,12 +105,12 @@ export default function PDPClient({ product }: PDPClientProps) {
 
     try {
       if (isInWishlist) {
-        await fetch(`http://localhost:5000/api/wishlist/${product.id}`, {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/wishlist/${product.id}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` }
         });
       } else {
-        await fetch('http://localhost:5000/api/wishlist', {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/wishlist`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -228,7 +228,7 @@ export default function PDPClient({ product }: PDPClientProps) {
 
     setAdding(true);
     try {
-      const res = await fetch('http://localhost:5000/api/cart/items', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/cart/items`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

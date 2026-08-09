@@ -5,7 +5,7 @@ import {
   LifeBuoy, RotateCcw, MessageCircle, Send, CheckCircle, RefreshCw, Loader2, AlertCircle
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api`;
 
 const TABS = [
   { key: 'returns', label: 'Returns & Refunds', icon: RotateCcw },

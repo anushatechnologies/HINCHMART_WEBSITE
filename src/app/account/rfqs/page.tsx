@@ -21,8 +21,8 @@ export default function RFQsPage() {
   useEffect(() => {
     if (!token) { window.location.href = '/login'; return; }
     Promise.all([
-      fetch('http://localhost:5000/api/account/me', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch('http://localhost:5000/api/rfq/my', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/account/me`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/rfq/my`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
     ]).then(([userRes, rfqRes]) => {
       if (userRes.success) setUser(userRes.data);
       if (rfqRes.success) setRfqs(rfqRes.data || []);

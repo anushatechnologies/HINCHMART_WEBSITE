@@ -7,7 +7,7 @@ import {
   Rocket, Copy, Check, TrendingUp, Megaphone
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api`;
 
 const TABS = [
   { key: 'coupons', label: 'Coupons',     icon: Tag },

@@ -28,7 +28,7 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
     // In a real scenario, there would be an endpoint /api/account/orders/:id
     // But since this is Phase 11 client implementation, we'll fetch from the orders endpoint and filter if needed, 
     // or assume /api/account/orders/:id exists. Let's try the generic endpoint.
-    fetch(`http://localhost:5000/api/orders/${id}`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/orders/${id}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(r => r.json())

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, ShieldCheck, RefreshCw, Phone, CheckCircle2 } from 'lucide-react';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 const OTP_LENGTH = 4;
 const RESEND_SECONDS = 30;
 

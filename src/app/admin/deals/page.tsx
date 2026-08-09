@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Zap, Plus, Trash2, Clock, ToggleLeft, ToggleRight, Search } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 export default function AdminDealsPage() {
   const [deals, setDeals] = useState<any[]>([]);

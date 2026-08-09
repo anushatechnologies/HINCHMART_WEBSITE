@@ -31,7 +31,8 @@ export default function SellerOrderDetail() {
 
       // In a real app, we'd have a specific GET /api/vendors/orders/:id endpoint
       // For now, we'll fetch all and filter to simulate it, or just use the same endpoint
-      const res = await fetch(`http://localhost:5000/api/vendors/orders?vendorId=${vendorId}`);
+      const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
+      const res = await fetch(`${API}/api/vendors/orders?vendorId=${vendorId}`);
       const data = await res.json();
       
       if (data.success) {
@@ -58,7 +59,8 @@ export default function SellerOrderDetail() {
     setMessage('');
 
     try {
-      const res = await fetch(`http://localhost:5000/api/vendors/orders/${id}/status`, {
+      const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
+      const res = await fetch(`${API}/api/vendors/orders/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, trackingNumber, courierName })

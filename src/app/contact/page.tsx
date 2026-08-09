@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { PhoneCall, Mail, MapPin, Send, MessageSquare } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '' });

@@ -19,7 +19,7 @@ const TABS = [
   { key: 'seo',    label: 'SEO',         icon: Search },
 ];
 
-const API = 'http://localhost:5000/api/vendors';
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/vendors`;
 
 export default function ProductEditor() {
   const { id } = useParams<{ id: string }>();

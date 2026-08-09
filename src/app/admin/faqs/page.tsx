@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { HelpCircle, Plus, Edit, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 const emptyForm = { question: '', answer: '', category: 'GENERAL', order: '0', isActive: true };
 

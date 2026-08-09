@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const API = 'http://localhost:5000/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api`;
 
 const TABS = [
   { key: 'reviews', label: 'Customer Reviews', icon: MessageSquare },

@@ -49,7 +49,7 @@ export default function ReviewSection({ productId }: { productId: number }) {
 
   const fetchReviews = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/products/${productId}/reviews`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/products/${productId}/reviews`);
       const json = await res.json();
       if (json.success) {
         setReviews(json.data);
@@ -65,7 +65,7 @@ export default function ReviewSection({ productId }: { productId: number }) {
     if (!token) { setError('Please login to leave a review.'); return; }
     setSubmitting(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/products/${productId}/reviews`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/products/${productId}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ rating, comment })

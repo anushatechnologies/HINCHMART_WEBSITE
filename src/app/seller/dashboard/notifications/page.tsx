@@ -5,7 +5,7 @@ import {
   Bell, Mail, MessageSquare, Smartphone, Save, Loader2, RefreshCw
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api`;
 
 const TABS = [
   { key: 'email', label: 'Email', icon: Mail },

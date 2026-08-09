@@ -18,7 +18,7 @@ export default function RfqPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/rfq', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/rfq`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -174,7 +174,7 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
       // Revoke refresh token in DB
       const refreshToken = localStorage.getItem('seller_refresh_token');
       if (refreshToken) {
-        await fetch('http://localhost:5000/api/auth/logout', {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/auth/logout`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refreshToken })

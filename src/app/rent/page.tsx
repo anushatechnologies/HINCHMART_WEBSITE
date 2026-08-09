@@ -23,7 +23,7 @@ export default function RentPage() {
   const fetchRentals = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/rentals', { cache: 'no-store' });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/rentals`, { cache: 'no-store' });
       const json = await res.json();
       if (json.success) {
         setProducts(json.data);
@@ -43,7 +43,7 @@ export default function RentPage() {
     setSubmitting(true);
     try {
       const totalAmount = Number(product.rentPricePerDay) * duration;
-      const res = await fetch('http://localhost:5000/api/rentals/request', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/rentals/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

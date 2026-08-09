@@ -5,7 +5,7 @@ import {
   Users, Shield, Activity, UserPlus, Key, RefreshCw, Loader2, CheckCircle2, XCircle
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api`;
 
 const TABS = [
   { key: 'staff', label: 'Staff Directory', icon: Users },

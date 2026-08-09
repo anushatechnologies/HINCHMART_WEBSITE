@@ -6,7 +6,7 @@ import {
   RefreshCw, Loader2, ArrowRight, UploadCloud, FileDown, PlusCircle, AlertCircle
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api`;
 
 const TABS = [
   { key: 'tracking', label: 'Tracking & Delivery', icon: MapPin },

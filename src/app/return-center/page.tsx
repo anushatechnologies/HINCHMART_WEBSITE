@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { RotateCcw, Search, Package, AlertCircle, CheckCircle } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 export default function ReturnCenterPage() {
   const [orderId, setOrderId] = useState('');

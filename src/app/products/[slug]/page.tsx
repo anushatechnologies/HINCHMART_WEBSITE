@@ -6,7 +6,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const { slug } = await params;
   let product = null;
   try {
-    const res = await fetch(`http://localhost:5000/api/products/${slug}`, { cache: 'no-store' });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/products/${slug}`, { cache: 'no-store' });
     const json = await res.json();
     if (json.success) product = json.data;
   } catch (error) {

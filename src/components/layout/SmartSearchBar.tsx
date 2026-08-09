@@ -53,7 +53,7 @@ export default function SmartSearchBar() {
 
   // Load categories for dropdown
   useEffect(() => {
-    fetch('http://localhost:5000/api/categories')
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/categories`)
       .then(r => r.json())
       .then(d => { if (d.success) setCategories(d.data); })
       .catch(() => {});
@@ -61,7 +61,7 @@ export default function SmartSearchBar() {
 
   // Load popular searches on mount
   useEffect(() => {
-    fetch('http://localhost:5000/api/search/popular')
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/search/popular`)
       .then(r => r.json())
       .then(d => { if (d.success) setPopular(d.data); })
       .catch(() => {});

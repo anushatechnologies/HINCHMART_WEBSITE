@@ -7,7 +7,7 @@ import { ShoppingBag, MapPin, Heart, ArrowRight, Package, TrendingUp, Clock, Ale
 const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
 const itemVariants = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } } };
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 export default function DashboardSummaryPage() {
   const [stats, setStats] = useState({ ordersCount: 0, wishlistCount: 0, addressCount: 0 });

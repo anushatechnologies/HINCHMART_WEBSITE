@@ -37,8 +37,8 @@ export default function MyOrdersPage() {
     const token = localStorage.getItem('token');
     if (!token) { window.location.href = '/login'; return; }
     Promise.all([
-      fetch('http://localhost:5000/api/account/me', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch('http://localhost:5000/api/orders', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/account/me`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/orders`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
     ]).then(([userRes, ordRes]) => {
       if (userRes.success) setUser(userRes.data);
       if (ordRes.success) setOrders(ordRes.data || []);

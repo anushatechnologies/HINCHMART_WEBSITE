@@ -7,7 +7,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
   let service = null;
   
   try {
-    const res = await fetch(`http://localhost:5000/api/services`);
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/services`);
     const json = await res.json();
     if (json.success) {
       service = json.data.find((s: any) => s.id === slug || s.name.toLowerCase().replace(/\s+/g, '-') === slug);

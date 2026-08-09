@@ -9,7 +9,7 @@ export default function AdminVendorsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/vendors')
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/vendors`)
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -22,7 +22,7 @@ export default function AdminVendorsPage() {
 
   const updateStatus = async (id: number, status: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/vendors/${id}/status`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/vendors/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })

@@ -14,7 +14,7 @@ export default function WishlistButton({ productId }: { productId: number }) {
         return;
       }
       
-      const res = await fetch('http://localhost:5000/api/wishlist', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/wishlist`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

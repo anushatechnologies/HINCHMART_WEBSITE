@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { FileText } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 export default function DynamicPage({ slug, title }: { slug: string, title: string }) {
   const [content, setContent] = useState('');

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Ticket, Copy, Check, Percent, IndianRupee, Clock } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 export default function CouponsPage() {
   const [coupons, setCoupons] = useState<any[]>([]);

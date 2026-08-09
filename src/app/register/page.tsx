@@ -63,7 +63,7 @@ export default function RegisterPage() {
     
     // EMAIL OTP logic (AWS SES mock in backend)
     try {
-      const res = await fetch('http://localhost:5000/api/auth/send-otp', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target, type })
@@ -106,7 +106,7 @@ export default function RegisterPage() {
 
     // Email Verify via Backend
     try {
-      const res = await fetch('http://localhost:5000/api/auth/verify-otp', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target, type, otp })
@@ -140,7 +140,7 @@ export default function RegisterPage() {
       // NOTE: We're passing the firebase token if phone was verified.
       // If we used a pure Firebase backend like verifyFirebaseToken, we'd hit that.
       // But we built a custom register endpoint that takes normal fields.
-      const res = await fetch('http://localhost:5000/api/auth/register', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, phone, password, businessName })
@@ -157,7 +157,7 @@ export default function RegisterPage() {
         const guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]');
         if (guestCart.length > 0) {
           try {
-            await fetch('http://localhost:5000/api/cart/sync', {
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/cart/sync`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
               body: JSON.stringify({ items: guestCart })

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Award, PackageSearch } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 async function fetchBrands() {
   try {

@@ -13,8 +13,8 @@ export default function Step1Category() {
   const [catSearch, setCatSearch] = useState('');
 
   useEffect(() => {
-    // 100% API-based: Fetch root categories & nested subcategories from backend
-    fetch('http://localhost:5000/api/categories')
+    const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
+    fetch(`${API}/api/categories`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.data) {

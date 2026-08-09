@@ -9,9 +9,8 @@ export default function Step14Inventory() {
 
   useEffect(() => {
     const info = localStorage.getItem('seller_info');
-    if (info) {
-      const vendorId = JSON.parse(info).id;
-      fetch(`http://localhost:5000/api/vendors/warehouses?vendorId=${vendorId}`)
+      const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
+      fetch(`${API}/api/vendors/warehouses?vendorId=${vendorId}`)
         .then(r => r.json())
         .then(d => { if (d.success) setWarehouses(d.data); });
     }

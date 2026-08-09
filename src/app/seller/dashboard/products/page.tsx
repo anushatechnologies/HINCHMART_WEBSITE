@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-const API = 'http://localhost:5000/api/vendors';
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/vendors`;
 
 type TabType = 'ALL' | 'ACTIVE' | 'PENDING' | 'DELETED';
 

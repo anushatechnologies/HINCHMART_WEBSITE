@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Truck, Search, MapPin, CheckCircle, Package, ArrowRight } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 export default function TrackOrderPage() {
   const [orderId, setOrderId] = useState('');

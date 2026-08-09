@@ -25,7 +25,7 @@ export default function RfqChatPage({ params }: { params: Promise<{ id: string }
     // 1. Fetch RFQ Details
     const fetchDetails = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/rfq/${rfqId}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/rfq/${rfqId}`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         const data = await res.json();
@@ -40,7 +40,7 @@ export default function RfqChatPage({ params }: { params: Promise<{ id: string }
     // 2. Fetch past messages
     const fetchMessages = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/rfq/${rfqId}/messages`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/rfq/${rfqId}/messages`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         const data = await res.json();

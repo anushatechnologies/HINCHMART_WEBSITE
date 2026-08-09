@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Users, ShoppingBag, Store, TrendingUp, DollarSign } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 export default function AdminAnalyticsPage() {
   const [data, setData] = useState<any>(null);

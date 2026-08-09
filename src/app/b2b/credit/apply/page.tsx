@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CreditCard, Building2, ShieldCheck, FileText, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api`;
 
 export default function ApplyCreditLine() {
   const router = useRouter();

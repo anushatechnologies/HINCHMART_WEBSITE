@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ChevronLeft, Package, Truck, CheckCircle, CreditCard, MapPin, ReceiptText, ArrowLeft } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 export default function OrderDetailsPage() {
   const { id } = useParams();

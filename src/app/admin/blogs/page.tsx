@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BookOpen, Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 const emptyForm = { title: '', slug: '', summary: '', content: '', imageUrl: '', published: true };
 

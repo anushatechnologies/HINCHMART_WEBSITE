@@ -17,7 +17,7 @@ export default function ProfilePage() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { window.location.href = '/login'; return; }
-    fetch('http://localhost:5000/api/account/me', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/account/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => {
         if (d.success) {
@@ -30,7 +30,7 @@ export default function ProfilePage() {
   const saveProfile = async () => {
     setSaving(true); setMsg('');
     const token = localStorage.getItem('token')!;
-    const res = await fetch('http://localhost:5000/api/account/me', {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/account/me`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(form)
@@ -44,7 +44,7 @@ export default function ProfilePage() {
     if (pwdForm.newPassword !== pwdForm.confirm) { setPwdMsg('❌ Passwords do not match'); return; }
     setPwdSaving(true); setPwdMsg('');
     const token = localStorage.getItem('token')!;
-    const res = await fetch('http://localhost:5000/api/account/change-password', {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/account/change-password`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ currentPassword: pwdForm.currentPassword, newPassword: pwdForm.newPassword })

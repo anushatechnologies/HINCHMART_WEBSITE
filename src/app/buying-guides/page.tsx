@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BookMarked, Search, ArrowRight, Tag, Hammer, Zap, Droplets, Shield, Home } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 const CATEGORIES = [
   { name: 'All', value: '' },

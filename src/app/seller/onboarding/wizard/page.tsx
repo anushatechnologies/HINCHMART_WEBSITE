@@ -8,7 +8,7 @@ import {
   Loader2, ShieldCheck, Sparkles, ArrowRight, Check, Star, Zap, Globe, BadgeCheck
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api`;
 
 const STEPS = [
   { id: 1, title: 'Business Info', subtitle: 'Company details', icon: Building2, color: 'from-violet-500 to-purple-600' },

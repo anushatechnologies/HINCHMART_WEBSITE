@@ -51,8 +51,8 @@ export default async function ProductsPage({ searchParams }: Props) {
 
   try {
     const [productRes, catRes] = await Promise.all([
-      fetch(`http://localhost:5000/api/products?${params.toString()}`, { cache: 'no-store' }),
-      fetch('http://localhost:5000/api/categories', { cache: 'no-store' }),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/products?${params.toString()}`, { cache: 'no-store' }),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/categories`, { cache: 'no-store' }),
     ]);
     const [productJson, catJson] = await Promise.all([productRes.json(), catRes.json()]);
     if (productJson.success) {

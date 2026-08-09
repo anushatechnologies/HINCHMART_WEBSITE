@@ -6,7 +6,7 @@ import {
   AlertCircle, Loader2, ArrowRight, RefreshCw
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api/vendors';
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/vendors`;
 
 export default function BulkTools() {
   const [vendorId, setVendorId] = useState<number | null>(null);

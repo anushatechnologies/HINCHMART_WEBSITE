@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ChevronRight, Grid, Package } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 async function fetchCategories() {
   try {

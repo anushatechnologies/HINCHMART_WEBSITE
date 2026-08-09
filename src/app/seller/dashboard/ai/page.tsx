@@ -5,7 +5,7 @@ import {
   Sparkles, FileText, TrendingUp, BarChart3, Image as ImageIcon, MessageSquare, Send, Loader2, Play
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api`;
 
 const TABS = [
   { key: 'content', label: 'Content & SEO Generator', icon: FileText, desc: 'Auto-write product descriptions and SEO tags.' },

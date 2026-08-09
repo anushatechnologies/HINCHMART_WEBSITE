@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Zap, Clock, Tag, ArrowRight } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 function Countdown({ endTime }: { endTime: string }) {
   const [timeLeft, setTimeLeft] = useState('');

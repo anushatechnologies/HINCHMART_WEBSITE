@@ -38,7 +38,7 @@ export default function SalesDashboard() {
     if (info) {
       try {
         const parsed = JSON.parse(info);
-        fetch(`http://localhost:5000/api/vendors/${parsed.id}/dashboard/sales`)
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/vendors/${parsed.id}/dashboard/sales`)
           .then(async res => {
             const ct = res.headers.get('content-type');
             if (res.ok && ct && ct.includes('application/json')) {

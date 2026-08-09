@@ -20,7 +20,7 @@ export default function ComparePage() {
 
   const fetchProducts = async (ids: string[]) => {
     try {
-      const promises = ids.map(id => fetch(`http://localhost:5000/api/products/${id}`).then(r => r.json()));
+      const promises = ids.map(id => fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/products/${id}`).then(r => r.json()));
       const results = await Promise.all(promises);
       const validProducts = results.filter(r => r.success).map(r => r.data);
       setProducts(validProducts);

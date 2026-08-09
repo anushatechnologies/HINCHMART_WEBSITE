@@ -18,7 +18,7 @@ export default function MegaMenu() {
   const [activeParent, setActiveParent] = useState<Category | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/categories')
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/categories`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.data) {

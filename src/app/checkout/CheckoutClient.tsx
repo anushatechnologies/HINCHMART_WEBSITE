@@ -66,8 +66,8 @@ export default function CheckoutClient() {
     }
     try {
       const [cartRes, addrRes] = await Promise.all([
-        fetch('http://localhost:5000/api/cart', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-        fetch('http://localhost:5000/api/addresses', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/cart`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/addresses`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
       ]);
 
       if (cartRes.success && cartRes.data) {
@@ -97,7 +97,7 @@ export default function CheckoutClient() {
     setErrorMsg('');
     setSavingAddress(true);
     try {
-      const res = await fetch('http://localhost:5000/api/addresses', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/addresses`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -126,7 +126,7 @@ export default function CheckoutClient() {
     setCouponError('');
     setCouponLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/coupons/validate', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/coupons/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: couponInput.trim(), subtotal })
@@ -160,7 +160,7 @@ export default function CheckoutClient() {
 
     try {
       // ── Step 1: Create the HinchMart DB Order ──────────────────────────────
-      const orderRes = await fetch('http://localhost:5000/api/orders/checkout', {
+      const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/orders/checkout`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -185,7 +185,7 @@ export default function CheckoutClient() {
       // ── Step 2: If Razorpay selected, open the payment modal ───────────────
       if (paymentMethod === 'online') {
         // Create Razorpay Order on backend
-        const rpRes = await fetch('http://localhost:5000/api/orders/create-razorpay-order', {
+        const rpRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/orders/create-razorpay-order`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ amount: dbOrder.total })
@@ -229,7 +229,7 @@ export default function CheckoutClient() {
           },
           handler: async (response: any) => {
             // Verify signature on backend
-            const verifyRes = await fetch('http://localhost:5000/api/orders/verify-payment', {
+            const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/orders/verify-payment`, {
               method: 'POST',
               headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
               body: JSON.stringify({

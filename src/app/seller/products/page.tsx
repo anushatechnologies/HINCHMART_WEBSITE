@@ -21,7 +21,7 @@ export default function SellerProducts() {
   const fetchProducts = async (vendorId: number) => {
     try {
       // Assuming the backend has a filter by vendorId
-      const res = await fetch(`http://localhost:5000/api/products?vendorId=${vendorId}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/products?vendorId=${vendorId}`);
       const data = await res.json();
       if (data.success) {
         setProducts(data.data);

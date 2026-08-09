@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, User, Bot, X } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 export default function LiveChatPage() {
   const [session, setSession] = useState<any>(null);

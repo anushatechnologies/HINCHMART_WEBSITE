@@ -29,7 +29,7 @@ export default function ChatBox({ rfqId, currentUserId, currentUserRole, apiBase
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Use Vercel env var or fallback
-  const socketUrl = apiBaseUrl || process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`;
+  const socketUrl = apiBaseUrl || process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}`;
 
   useEffect(() => {
     if (!isOpen) return;

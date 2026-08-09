@@ -17,8 +17,8 @@ export default function AddressesPage() {
   useEffect(() => {
     if (!token) { window.location.href = '/login'; return; }
     Promise.all([
-      fetch('http://localhost:5000/api/account/me', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch('http://localhost:5000/api/addresses', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/account/me`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/addresses`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
     ]).then(([userRes, addrRes]) => {
       if (userRes.success) setUser(userRes.data);
       if (addrRes.success) setAddresses(addrRes.data || []);
@@ -27,7 +27,7 @@ export default function AddressesPage() {
 
   const addAddress = async () => {
     setSaving(true);
-    const res = await fetch('http://localhost:5000/api/addresses', {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/addresses`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(form)
@@ -37,7 +37,7 @@ export default function AddressesPage() {
   };
 
   const deleteAddress = async (id: number) => {
-    await fetch(`http://localhost:5000/api/addresses/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/addresses/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     setAddresses(p => p.filter(a => a.id !== id));
   };
 

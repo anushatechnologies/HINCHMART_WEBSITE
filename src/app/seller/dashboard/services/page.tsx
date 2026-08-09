@@ -5,7 +5,7 @@ import {
   Wrench, Calendar, MapPin, Clock, Briefcase, RefreshCw, Loader2, PlusCircle
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api`;
 
 const TABS = [
   { key: 'overview', label: 'Service Dashboard', icon: Briefcase },

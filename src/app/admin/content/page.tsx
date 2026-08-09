@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { FileText, Save, CheckCircle } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 const PAGES = [
   { slug: 'about', label: 'About Us' },
   { slug: 'privacy-policy', label: 'Privacy Policy' },

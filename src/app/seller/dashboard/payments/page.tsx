@@ -6,7 +6,7 @@ import {
   ArrowUpRight, AlertCircle, RefreshCw, Loader2, Play
 } from 'lucide-react';
 
-const API = 'http://localhost:5000/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api`;
 
 const TABS = [
   { key: 'overview', label: 'Overview & Payouts', icon: Wallet },

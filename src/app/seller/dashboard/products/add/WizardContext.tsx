@@ -41,9 +41,10 @@ export function WizardProvider({ children }: { children: ReactNode }) {
   const saveDraft = async () => {
     setIsSaving(true);
     try {
+      const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
       if (productId) {
         // Update existing draft
-        await fetch(`http://localhost:5000/api/vendors/products/${productId}`, {
+        await fetch(`${API}/api/vendors/products/${productId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData) // In a real app, only send changed fields
@@ -54,7 +55,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
         if (!vendorInfo) return;
         const vendorId = JSON.parse(vendorInfo).id;
 
-        const res = await fetch(`http://localhost:5000/api/vendors/products/draft`, {
+        const res = await fetch(`${API}/api/vendors/products/draft`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 

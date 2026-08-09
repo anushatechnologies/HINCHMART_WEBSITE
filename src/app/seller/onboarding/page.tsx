@@ -126,7 +126,7 @@ export default function SellerOnboarding() {
     setSaving(true);
     setError('');
     try {
-      const res = await fetch(`http://localhost:5000/api/vendors/${vendorId}/onboarding`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/vendors/${vendorId}/onboarding`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, onboardingStep: step })
@@ -186,7 +186,7 @@ export default function SellerOnboarding() {
         bank: `/kyc/penny-drop`
       };
       
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/vendors/${vendorId}${endpoints[type]}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/vendors/${vendorId}${endpoints[type]}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -213,7 +213,7 @@ export default function SellerOnboarding() {
     await saveProgress(8);
     // Final KYC Submission
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/vendors/${vendorId}/kyc/submit`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/vendors/${vendorId}/kyc/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

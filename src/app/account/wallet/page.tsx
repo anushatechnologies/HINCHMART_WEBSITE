@@ -18,7 +18,7 @@ export default function WalletPage() {
   const [isAddingFunds, setIsAddingFunds] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api`;
 
   useEffect(() => {
     // In a real app, this fetches from /api/wallet

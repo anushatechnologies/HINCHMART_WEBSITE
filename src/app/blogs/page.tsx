@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BookOpen, Search, Calendar, ArrowRight } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 export default function BlogsPage() {
   const [blogs, setBlogs] = useState<any[]>([]);

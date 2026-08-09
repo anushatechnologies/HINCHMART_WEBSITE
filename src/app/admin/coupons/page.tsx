@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Ticket, Plus, Trash2, Percent, IndianRupee, Copy, Check } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
 
 const emptyForm = { code: '', type: 'PERCENTAGE', value: '', minOrderValue: '', maxUses: '', expiresAt: '', isActive: true };
 

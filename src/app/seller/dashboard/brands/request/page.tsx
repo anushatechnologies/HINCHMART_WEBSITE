@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, UserCircle, ArrowLeft, Loader2, CheckCircle2, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-const API = 'http://localhost:5000/api';
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api`;
 
 export default function BrandRequestForm() {
   const router = useRouter();
