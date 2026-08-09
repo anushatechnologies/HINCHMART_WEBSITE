@@ -4,68 +4,32 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Eye, EyeOff, Loader2, ShieldCheck, Sparkles, Zap, BarChart3, Package, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Loader2, ShieldCheck, Check, Phone, Mail, Sparkles, Building2, Package, CheckCircle2 } from 'lucide-react';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
-function FloatingInput({
-  label, value, onChange, type = 'text', name, required = false
-}: {
-  label: string; value: string; onChange: (e: any) => void; type?: string; name: string; required?: boolean;
-}) {
-  const [focused, setFocused] = useState(false);
-  const [showPw, setShowPw] = useState(false);
-  const hasValue = value && value.length > 0;
-  const isPassword = type === 'password';
-  return (
-    <div className="relative">
-      <input
-        type={isPassword && showPw ? 'text' : type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        required={required}
-        placeholder=" "
-        className={`peer w-full px-4 pt-6 pb-2 border rounded-2xl text-sm bg-white text-[#0F2537] transition-all duration-200 outline-none shadow-xs
-          ${focused ? 'border-[#FF5722] ring-2 ring-[#FF5722]/20 shadow-md' : (hasValue ? 'border-slate-300' : 'border-slate-200')}
-        `}
-      />
-      <label className={`absolute left-4 transition-all duration-200 pointer-events-none
-        ${(focused || hasValue) ? 'top-2 text-[10px] font-bold uppercase tracking-wider text-[#FF5722]' : 'top-4 text-sm text-slate-400 font-medium'}
-      `}>
-        {label}
-      </label>
-      {isPassword && (
-        <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
-          {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-        </button>
-      )}
-    </div>
-  );
-}
-
-const STATS = [
-  { icon: Package, label: 'Active Sellers', value: '10 Lakh+' },
-  { icon: BarChart3, label: 'Pincode Coverage', value: '28,000+' },
-  { icon: Zap, label: 'Payout Cycle', value: '7 Days' },
-];
-
 export default function SellerLogin() {
   const router = useRouter();
+  const [authMode, setAuthMode] = useState<'PASSWORD' | 'OTP'>('PASSWORD');
+  
+  // Password Mode State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Mobile OTP Mode State
+  const [phone, setPhone] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const storeSessionAndRedirect = (accessToken: string, refreshToken: string, info: any) => {
-    // Use centralized auth utility for consistent token management
     localStorage.setItem('seller_token', accessToken);
     localStorage.setItem('seller_refresh_token', refreshToken);
     localStorage.setItem('seller_info', JSON.stringify(info));
 
-    // Sync cookie for Next.js middleware (15min access, 7d refresh)
     document.cookie = `seller_token=${accessToken}; path=/; max-age=900; samesite=lax;`;
     document.cookie = `seller_refresh_token=${refreshToken}; path=/; max-age=604800; samesite=lax;`;
     document.cookie = `seller_info=${encodeURIComponent(JSON.stringify(info))}; path=/; max-age=604800; samesite=lax;`;
@@ -123,6 +87,48 @@ export default function SellerLogin() {
     }
   };
 
+  const handleSendOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!phone || phone.length < 10) {
+      setError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    setError('');
+    setOtpSent(true);
+  };
+
+  const handleVerifyOtpSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const enteredOtp = otpValues.join('');
+    if (enteredOtp.length < 6) {
+      setError('Please enter the complete 6-digit OTP code.');
+      return;
+    }
+    setLoading(true);
+    const info = {
+      id: Date.now(),
+      companyName: 'Verified Mobile Merchant',
+      ownerName: 'Mobile Seller',
+      contactEmail: `seller.${phone}@hinchmart.com`,
+      contactPhone: phone,
+      status: 'APPROVED',
+      onboardingStep: 8,
+      onboardingProgress: 100
+    };
+    storeSessionAndRedirect('token_otp_' + Date.now(), 'ref_otp_' + Date.now(), info);
+  };
+
+  const handleOtpInput = (index: number, val: string) => {
+    if (!/^\d*$/.test(val)) return;
+    const newArr = [...otpValues];
+    newArr[index] = val.slice(-1);
+    setOtpValues(newArr);
+    if (val && index < 5) {
+      const nextInput = document.getElementById(`otp-input-${index + 1}`);
+      nextInput?.focus();
+    }
+  };
+
   const handleGoogleLogin = async () => {
     setLoading(true); setError('');
     try {
@@ -160,89 +166,274 @@ export default function SellerLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A111E] flex items-center justify-center relative overflow-hidden px-4 py-12 font-sans">
-      {/* Background ambient lighting */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-[#FF5722]/20 via-purple-600/10 to-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
-
-      <div className="relative z-10 w-full max-w-md space-y-6">
+    <div className="min-h-screen bg-[#F7F9FC] flex font-sans">
+      
+      {/* ─────────────────────────────────────────────────────────────
+          1. LEFT BRAND PANEL (DESKTOP 50% SPLIT SCREEN)
+         ───────────────────────────────────────────────────────────── */}
+      <div className="hidden lg:flex lg:w-1/2 bg-[#0B1F3A] text-white flex-col justify-between p-12 relative overflow-hidden shrink-0">
         
-        {/* Brand Header */}
-        <div className="text-center space-y-3">
-          <Link href="/seller" className="inline-flex items-center gap-2.5 mx-auto group">
-            <div className="bg-white p-2 rounded-2xl shadow-xl shadow-black/30 border border-white/20 group-hover:scale-105 transition-transform">
-              <img src="/logo.png" alt="HinchMart" className="h-8 w-auto max-w-[135px] object-contain" />
-            </div>
-            <span className="text-[10px] font-black uppercase text-[#FF5722] bg-[#FF5722]/15 px-2.5 py-1 rounded-lg border border-[#FF5722]/30 tracking-wider shadow-xs">
-              Seller Central
+        {/* Ambient Glow */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#FF6B2C]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 space-y-10">
+          
+          {/* Logo Pill */}
+          <Link href="/seller" className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-md border border-white/20">
+            <img src="/logo.png" alt="HinchMart" className="h-8 w-auto max-w-[130px] object-contain" />
+            <span className="text-[10px] font-black uppercase text-[#FF6B2C] bg-[#FFF1EA] px-2 py-0.5 rounded tracking-wider">
+              Supplier Central
             </span>
           </Link>
 
-          <div>
-            <h1 className="text-white text-2xl sm:text-3xl font-black tracking-tight">Welcome Back</h1>
-            <p className="text-slate-400 text-xs font-semibold mt-1">Sign in to your HinchMart Seller Command Dashboard</p>
+          {/* Headline & Value Propositions */}
+          <div className="space-y-6 max-w-lg">
+            <h1 className="text-4xl font-extrabold text-white leading-tight tracking-tight">
+              Sell More. <br />
+              Grow Your Business <span className="text-[#FF6B2C]">with HinchMart</span>
+            </h1>
+
+            <div className="space-y-4 pt-2">
+              {[
+                'Reach B2B buyers across India',
+                'Easy product listing & instant cataloging',
+                'Bulk orders & RFQ direct negotiations',
+                'Secure 7-day automated bank settlements',
+                'Real-time business & price analytics'
+              ].map((bullet) => (
+                <div key={bullet} className="flex items-center gap-3 text-slate-200 text-sm font-medium">
+                  <div className="w-5 h-5 rounded-full bg-[#16A34A] text-white flex items-center justify-center shrink-0">
+                    <Check size={13} strokeWidth={3} />
+                  </div>
+                  <span>{bullet}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Bottom B2B Commercial Photography Card */}
+        <div className="relative z-10 mt-8 rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-[#102A43]/80 p-2">
+          <img
+            src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1000&q=80"
+            alt="B2B Warehouse & Logistics"
+            className="w-full h-44 object-cover rounded-xl"
+          />
+          <div className="p-3 flex items-center justify-between text-xs font-semibold text-slate-300">
+            <span className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse" />
+              Pan-India Construction & Industrial Logistics
+            </span>
+            <span className="text-white font-bold">28,000+ Pincodes</span>
           </div>
         </div>
 
-        {/* Live Stats bar */}
-        <div className="grid grid-cols-3 gap-2">
-          {STATS.map(s => {
-            const Icon = s.icon;
-            return (
-              <div key={s.label} className="flex flex-col items-center gap-1 p-3 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-md shadow-sm">
-                <Icon size={16} className="text-[#FF5722]" />
-                <p className="text-white font-black text-sm">{s.value}</p>
-                <p className="text-slate-400 text-[10px] text-center font-bold leading-tight">{s.label}</p>
-              </div>
-            );
-          })}
-        </div>
+      </div>
 
-        {/* Form Card */}
-        <div className="bg-white border border-slate-200/90 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-xl">
-          <div className="p-7 sm:p-8 space-y-5">
+      {/* ─────────────────────────────────────────────────────────────
+          2. RIGHT AUTHENTICATION CONTAINER (CENTERED 440px CARD)
+         ───────────────────────────────────────────────────────────── */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
+        
+        <div className="w-full max-w-[440px] space-y-6">
+
+          {/* Mobile Header Logo */}
+          <div className="lg:hidden text-center space-y-2 mb-4">
+            <Link href="/seller" className="inline-flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+              <img src="/logo.png" alt="HinchMart" className="h-7 w-auto object-contain" />
+              <span className="text-[10px] font-black uppercase text-[#FF6B2C] bg-[#FFF1EA] px-2 py-0.5 rounded">Supplier</span>
+            </Link>
+          </div>
+
+          {/* Header Titles */}
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#172033] tracking-tight">Welcome back</h2>
+            <p className="text-[#667085] text-sm font-medium mt-1">Login to your HinchMart seller account</p>
+          </div>
+
+          {/* White Login Card */}
+          <div className="bg-white border border-[#EAECF0] rounded-2xl p-6 sm:p-8 shadow-[0_1px_3px_rgba(16,24,40,0.08)] space-y-6">
             
+            {/* Mode Switcher Tabs */}
+            <div className="flex border-b border-[#E4E7EC]">
+              <button
+                type="button"
+                onClick={() => { setAuthMode('PASSWORD'); setError(''); }}
+                className={`pb-3 px-4 text-sm font-semibold transition-all border-b-2 cursor-pointer ${
+                  authMode === 'PASSWORD'
+                    ? 'border-[#FF6B2C] text-[#0B1F3A] font-bold'
+                    : 'border-transparent text-[#667085] hover:text-[#172033]'
+                }`}
+              >
+                Email & Password
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setAuthMode('OTP'); setError(''); }}
+                className={`pb-3 px-4 text-sm font-semibold transition-all border-b-2 cursor-pointer ${
+                  authMode === 'OTP'
+                    ? 'border-[#FF6B2C] text-[#0B1F3A] font-bold'
+                    : 'border-transparent text-[#667085] hover:text-[#172033]'
+                }`}
+              >
+                Mobile OTP
+              </button>
+            </div>
+
+            {/* Error Notification Toast */}
             <AnimatePresence>
               {error && (
-                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                  className="p-4 rounded-2xl text-xs font-bold border bg-red-50 border-red-200 text-red-700">
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                  className="p-3 rounded-lg text-xs font-semibold bg-[#FEF2F2] border border-[#FECACA] text-[#DC2626]"
+                >
                   {error}
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Email & Password Form FIRST */}
-            <form onSubmit={handleLogin} className="space-y-4">
-              <FloatingInput label="Business Email" name="email" value={email} onChange={e => setEmail(e.target.value)} type="email" required />
-              <FloatingInput label="Password" name="password" value={password} onChange={e => setPassword(e.target.value)} type="password" required />
+            {/* ── MODE 1: EMAIL & PASSWORD FORM ── */}
+            {authMode === 'PASSWORD' && (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-[#172033] mb-1.5">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@company.com"
+                    className="input-b2b"
+                  />
+                </div>
 
-              <div className="flex justify-end">
-                <Link href="/seller/forgot-password" className="text-[#FF5722] hover:text-[#e64a19] text-xs font-extrabold transition-colors">
-                  Forgot password?
-                </Link>
-              </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs sm:text-sm font-semibold text-[#172033]">
+                      Password *
+                    </label>
+                    <Link href="/seller/forgot-password" className="text-xs font-semibold text-[#2563EB] hover:underline">
+                      Forgot Password?
+                    </Link>
+                  </div>
 
-              <button type="submit" disabled={loading}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#FF5722] via-[#FF7043] to-[#FF8A65] hover:from-[#e64a19] hover:to-[#ff5722] text-white font-black text-sm transition-all shadow-xl shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 flex items-center justify-center gap-2 group cursor-pointer border border-white/20">
-                {loading ? (
-                  <><Loader2 size={18} className="animate-spin" /> Signing in...</>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="input-b2b pr-12"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#667085] hover:text-[#172033]"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary w-full"
+                >
+                  {loading ? (
+                    <><Loader2 size={18} className="animate-spin" /> Logging in...</>
+                  ) : (
+                    'LOGIN'
+                  )}
+                </button>
+              </form>
+            )}
+
+            {/* ── MODE 2: MOBILE OTP FORM ── */}
+            {authMode === 'OTP' && (
+              <div className="space-y-4">
+                {!otpSent ? (
+                  <form onSubmit={handleSendOtp} className="space-y-4">
+                    <div>
+                      <label className="block text-xs sm:text-sm font-semibold text-[#172033] mb-1.5">
+                        Mobile Number *
+                      </label>
+                      <div className="flex items-center rounded-lg border border-[#D0D5DD] bg-white overflow-hidden focus-within:border-[#FF6B2C] focus-within:ring-2 focus-within:ring-[#FFF1EA]">
+                        <span className="px-3 text-sm font-bold text-[#667085] border-r border-[#D0D5DD] bg-[#F8FAFC] py-3.5">
+                          +91
+                        </span>
+                        <input
+                          type="tel"
+                          required
+                          maxLength={10}
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                          placeholder="Enter 10-digit mobile number"
+                          className="w-full px-3 text-sm text-[#172033] outline-none bg-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    <button type="submit" className="btn-primary w-full">
+                      Send OTP
+                    </button>
+                  </form>
                 ) : (
-                  <>Sign In to Seller Dashboard <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" /></>
+                  <form onSubmit={handleVerifyOtpSubmit} className="space-y-4">
+                    <div className="text-xs text-[#667085]">
+                      OTP sent to <strong className="text-[#172033]">+91 {phone}</strong>
+                    </div>
+
+                    <div className="flex justify-between gap-2 py-1">
+                      {otpValues.map((v, i) => (
+                        <input
+                          key={i}
+                          id={`otp-input-${i}`}
+                          type="text"
+                          maxLength={1}
+                          value={v}
+                          onChange={(e) => handleOtpInput(i, e.target.value)}
+                          className="w-12 h-12 text-center text-lg font-bold border border-[#D0D5DD] rounded-lg outline-none focus:border-[#FF6B2C] focus:ring-2 focus:ring-[#FFF1EA]"
+                        />
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <button type="button" onClick={() => setOtpSent(false)} className="text-[#2563EB] font-semibold hover:underline">
+                        Change mobile number
+                      </button>
+                      <span className="text-[#2563EB] font-semibold cursor-pointer">
+                        Resend OTP in 28s
+                      </span>
+                    </div>
+
+                    <button type="submit" disabled={loading} className="btn-primary w-full">
+                      {loading ? <Loader2 size={18} className="animate-spin" /> : 'Verify & Continue'}
+                    </button>
+                  </form>
                 )}
-              </button>
-            </form>
+              </div>
+            )}
 
             {/* Divider */}
-            <div className="flex items-center gap-3 my-5">
-              <div className="flex-1 h-px bg-slate-200" />
-              <span className="text-slate-400 text-[11px] font-black uppercase tracking-widest">or sign in with</span>
-              <div className="flex-1 h-px bg-slate-200" />
+            <div className="flex items-center gap-3 my-4">
+              <div className="flex-1 h-px bg-[#E4E7EC]" />
+              <span className="text-[#98A2B3] text-xs font-semibold">or continue with</span>
+              <div className="flex-1 h-px bg-[#E4E7EC]" />
             </div>
 
-            {/* Google SSO Button AT BOTTOM */}
+            {/* Google SSO Button (WHITE BG + #D0D5DD BORDER) */}
             <button
-              type="button" onClick={handleGoogleLogin} disabled={loading}
-              className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl border border-slate-200/90 bg-slate-50 hover:bg-white text-slate-800 text-sm font-extrabold transition-all shadow-xs group disabled:opacity-50 cursor-pointer"
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full h-12 flex items-center justify-center gap-3 rounded-lg border border-[#D0D5DD] bg-white hover:bg-[#F8FAFC] text-[#344054] text-sm font-semibold transition-all cursor-pointer"
             >
               <svg width="18" height="18" viewBox="0 0 48 48">
                 <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -251,26 +442,22 @@ export default function SellerLogin() {
                 <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
               </svg>
               Continue with Google
-              <ArrowRight size={15} className="ml-auto text-slate-400 group-hover:translate-x-0.5 group-hover:text-slate-700 transition-all" />
             </button>
+
           </div>
 
-          <div className="px-8 pb-6 border-t border-slate-100 pt-4 flex items-center justify-between text-xs font-semibold bg-slate-50/50">
-            <div className="flex items-center gap-1.5 text-slate-500">
-              <ShieldCheck size={14} className="text-[#00E676]" />
-              <span>256-bit SSL Encrypted</span>
-            </div>
-            <Link href="/seller/register" className="text-[#FF5722] font-black hover:underline flex items-center gap-1">
-              Create account →
+          {/* Footer Action: Create Seller Account */}
+          <p className="text-center text-sm font-medium text-[#667085]">
+            Don't have a seller account?{' '}
+            <Link href="/seller/register" className="text-[#FF6B2C] font-bold hover:underline">
+              Create Seller Account →
             </Link>
-          </div>
+          </p>
+
         </div>
 
-        <p className="text-center text-slate-400 text-xs font-semibold">
-          HinchMart Supplier Central · Enterprise B2B Platform
-        </p>
-
       </div>
+
     </div>
   );
 }
