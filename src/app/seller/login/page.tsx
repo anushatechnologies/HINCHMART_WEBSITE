@@ -160,24 +160,27 @@ export default function SellerLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center relative overflow-hidden px-4 py-12 font-sans">
-      
+    <div className="min-h-screen bg-[#0A111E] flex items-center justify-center relative overflow-hidden px-4 py-12 font-sans">
+      {/* Background ambient lighting */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-[#FF5722]/20 via-purple-600/10 to-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-80 h-80 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
+
       <div className="relative z-10 w-full max-w-md space-y-6">
         
         {/* Brand Header */}
         <div className="text-center space-y-3">
-          <Link href="/seller" className="inline-flex items-center gap-2.5 mx-auto">
-            <div className="bg-white p-1.5 rounded-xl shadow-md border border-slate-200">
-              <img src="/logo.png" alt="HinchMart" className="h-8 w-auto max-w-[130px] object-contain" />
+          <Link href="/seller" className="inline-flex items-center gap-2.5 mx-auto group">
+            <div className="bg-white p-2 rounded-2xl shadow-xl shadow-black/30 border border-white/20 group-hover:scale-105 transition-transform">
+              <img src="/logo.png" alt="HinchMart" className="h-8 w-auto max-w-[135px] object-contain" />
             </div>
-            <span className="text-[10px] font-black uppercase text-[#FF5722] bg-orange-50 px-2 py-0.5 rounded border border-orange-200 tracking-wider">
-              Supplier Central
+            <span className="text-[10px] font-black uppercase text-[#FF5722] bg-[#FF5722]/15 px-2.5 py-1 rounded-lg border border-[#FF5722]/30 tracking-wider shadow-xs">
+              Seller Central
             </span>
           </Link>
 
           <div>
-            <h1 className="text-[#0F2537] text-2xl sm:text-3xl font-black tracking-tight">Welcome Back</h1>
-            <p className="text-slate-500 text-xs font-medium mt-1">Sign in to your HinchMart Seller Command Portal</p>
+            <h1 className="text-white text-2xl sm:text-3xl font-black tracking-tight">Welcome Back</h1>
+            <p className="text-slate-400 text-xs font-semibold mt-1">Sign in to your HinchMart Seller Command Dashboard</p>
           </div>
         </div>
 
@@ -186,18 +189,18 @@ export default function SellerLogin() {
           {STATS.map(s => {
             const Icon = s.icon;
             return (
-              <div key={s.label} className="flex flex-col items-center gap-1 p-3 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+              <div key={s.label} className="flex flex-col items-center gap-1 p-3 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-md shadow-sm">
                 <Icon size={16} className="text-[#FF5722]" />
-                <p className="text-[#0F2537] font-black text-sm">{s.value}</p>
-                <p className="text-slate-400 text-[10px] text-center font-medium leading-tight">{s.label}</p>
+                <p className="text-white font-black text-sm">{s.value}</p>
+                <p className="text-slate-400 text-[10px] text-center font-bold leading-tight">{s.label}</p>
               </div>
             );
           })}
         </div>
 
-        {/* Card */}
-        <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xl">
-          <div className="p-8 space-y-4">
+        {/* Form Card */}
+        <div className="bg-white border border-slate-200/90 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-xl">
+          <div className="p-7 sm:p-8 space-y-5">
             
             <AnimatePresence>
               {error && (
@@ -214,13 +217,13 @@ export default function SellerLogin() {
               <FloatingInput label="Password" name="password" value={password} onChange={e => setPassword(e.target.value)} type="password" required />
 
               <div className="flex justify-end">
-                <Link href="/seller/forgot-password" className="text-[#FF5722] hover:text-[#e64a19] text-xs font-bold transition-colors">
+                <Link href="/seller/forgot-password" className="text-[#FF5722] hover:text-[#e64a19] text-xs font-extrabold transition-colors">
                   Forgot password?
                 </Link>
               </div>
 
               <button type="submit" disabled={loading}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#FF5722] to-[#FF7043] hover:from-[#e64a19] hover:to-[#ff5722] text-white font-black text-sm transition-all shadow-xl shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 flex items-center justify-center gap-2 group cursor-pointer">
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#FF5722] via-[#FF7043] to-[#FF8A65] hover:from-[#e64a19] hover:to-[#ff5722] text-white font-black text-sm transition-all shadow-xl shadow-orange-500/25 hover:shadow-orange-500/40 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 flex items-center justify-center gap-2 group cursor-pointer border border-white/20">
                 {loading ? (
                   <><Loader2 size={18} className="animate-spin" /> Signing in...</>
                 ) : (
@@ -232,14 +235,14 @@ export default function SellerLogin() {
             {/* Divider */}
             <div className="flex items-center gap-3 my-5">
               <div className="flex-1 h-px bg-slate-200" />
-              <span className="text-slate-400 text-xs font-bold uppercase tracking-widest">or sign in with</span>
+              <span className="text-slate-400 text-[11px] font-black uppercase tracking-widest">or sign in with</span>
               <div className="flex-1 h-px bg-slate-200" />
             </div>
 
             {/* Google SSO Button AT BOTTOM */}
             <button
               type="button" onClick={handleGoogleLogin} disabled={loading}
-              className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-sm font-bold transition-all shadow-xs group disabled:opacity-50 cursor-pointer"
+              className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl border border-slate-200/90 bg-slate-50 hover:bg-white text-slate-800 text-sm font-extrabold transition-all shadow-xs group disabled:opacity-50 cursor-pointer"
             >
               <svg width="18" height="18" viewBox="0 0 48 48">
                 <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -252,18 +255,18 @@ export default function SellerLogin() {
             </button>
           </div>
 
-          <div className="px-8 pb-6 border-t border-slate-100 pt-4 flex items-center justify-between text-xs font-medium">
+          <div className="px-8 pb-6 border-t border-slate-100 pt-4 flex items-center justify-between text-xs font-semibold bg-slate-50/50">
             <div className="flex items-center gap-1.5 text-slate-500">
-              <ShieldCheck size={14} className="text-emerald-600" />
+              <ShieldCheck size={14} className="text-[#00E676]" />
               <span>256-bit SSL Encrypted</span>
             </div>
-            <Link href="/seller/register" className="text-[#FF5722] font-black hover:underline">
+            <Link href="/seller/register" className="text-[#FF5722] font-black hover:underline flex items-center gap-1">
               Create account →
             </Link>
           </div>
         </div>
 
-        <p className="text-center text-slate-400 text-xs font-medium">
+        <p className="text-center text-slate-400 text-xs font-semibold">
           HinchMart Supplier Central · Enterprise B2B Platform
         </p>
 
