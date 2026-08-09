@@ -199,7 +199,7 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
   const pageTitle = pathname.split('/').pop()?.replace(/-/g, ' ') || 'Dashboard';
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-[#F8FAFC] flex font-sans">
+    <div className="h-screen w-full overflow-hidden bg-[#0A111E] flex font-sans text-slate-100">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
