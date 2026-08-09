@@ -154,6 +154,8 @@ export default function SellerLogin() {
          } else {
             router.push('/seller/dashboard');
          }
+      } else if (data.notFound) {
+         setError('No seller account found with this mobile number. Please create a seller account.');
       } else {
          throw new Error(data.message || 'Failed to authenticate on backend');
       }
