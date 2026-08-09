@@ -94,6 +94,7 @@ export default function SellerLogin() {
       return;
     }
     setError('');
+    setOtpValues(['1', '2', '3', '4', '5', '6']);
     setOtpSent(true);
   };
 
@@ -386,8 +387,12 @@ export default function SellerLogin() {
                   </form>
                 ) : (
                   <form onSubmit={handleVerifyOtpSubmit} className="space-y-4">
-                    <div className="text-xs text-[#667085]">
-                      OTP sent to <strong className="text-[#172033]">+91 {phone}</strong>
+                    <div className="p-3 rounded-lg bg-[#F0FDF4] border border-[#BBF7D0] text-xs text-[#16A34A] font-semibold space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span>✓ OTP Sent to <strong className="text-[#172033]">+91 {phone}</strong></span>
+                        <span className="bg-[#16A34A] text-white text-[10px] font-bold px-1.5 py-0.5 rounded">Demo Mode</span>
+                      </div>
+                      <p className="text-[11px] text-[#16A34A]/90 font-normal">Use Verification Code: <strong className="font-mono text-sm tracking-widest text-[#0B1F3A]">123456</strong></p>
                     </div>
 
                     <div className="flex justify-between gap-2 py-1">
@@ -405,12 +410,16 @@ export default function SellerLogin() {
                     </div>
 
                     <div className="flex items-center justify-between text-xs">
-                      <button type="button" onClick={() => setOtpSent(false)} className="text-[#2563EB] font-semibold hover:underline">
-                        Change mobile number
+                      <button
+                        type="button"
+                        onClick={() => setOtpValues(['1', '2', '3', '4', '5', '6'])}
+                        className="text-[#FF6B2C] font-bold hover:underline"
+                      >
+                        Auto-fill OTP (123456)
                       </button>
-                      <span className="text-[#2563EB] font-semibold cursor-pointer">
-                        Resend OTP in 28s
-                      </span>
+                      <button type="button" onClick={() => setOtpSent(false)} className="text-[#2563EB] font-semibold hover:underline">
+                        Change number
+                      </button>
                     </div>
 
                     <button type="submit" disabled={loading} className="btn-primary w-full">
