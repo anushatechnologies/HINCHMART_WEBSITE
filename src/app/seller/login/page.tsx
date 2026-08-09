@@ -26,6 +26,12 @@ export default function SellerLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Scenario B Link State
+  const [requireOtpLink, setRequireOtpLink] = useState(false);
+  const [linkEmail, setLinkEmail] = useState('');
+  const [linkMaskedPhone, setLinkMaskedPhone] = useState('');
+  const [pendingGoogleToken, setPendingGoogleToken] = useState('');
+
   const storeSessionAndRedirect = (accessToken: string, refreshToken: string, info: any) => {
     localStorage.setItem('seller_token', accessToken);
     localStorage.setItem('seller_refresh_token', refreshToken);
@@ -199,12 +205,89 @@ export default function SellerLogin() {
          } else {
             router.push('/seller/dashboard');
          }
+      } else if (data.requireOtpLink) {
+         setRequireOtpLink(true);
+         setLinkEmail(data.email);
+         setLinkMaskedPhone(data.maskedPhone);
+         setPendingGoogleToken(idToken);
       } else {
          throw new Error(data.message || 'Failed to authenticate on backend');
       }
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Google Login Failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendLinkOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!phone || phone.length < 10) {
+      setError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      setupRecaptcha();
+      const appVerifier = (window as any).recaptchaVerifier;
+      const formattedPhone = `+91${phone}`;
+      const confirmResult = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
+      setConfirmationResult(confirmResult);
+      setOtpSent(true);
+      setOtpValues(['', '', '', '', '', '']);
+    } catch (err: any) {
+      setError(err.message || 'Failed to send OTP.');
+      if ((window as any).recaptchaVerifier) {
+        (window as any).recaptchaVerifier.clear();
+        (window as any).recaptchaVerifier = undefined;
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyLinkOtp = async () => {
+    const enteredOtp = otpValues.join('');
+    if (enteredOtp.length < 6) {
+      setError('Please enter the complete 6-digit OTP code.');
+      return;
+    }
+    setLoading(true);
+    try {
+      if (!confirmationResult) throw new Error('No OTP session found.');
+      const result = await confirmationResult.confirm(enteredOtp);
+      const phoneToken = await result.user.getIdToken();
+      
+      const res = await fetch('/api/seller/auth/link-provider', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ googleToken: pendingGoogleToken, phoneToken })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+         const sellerData = data.data;
+         localStorage.setItem('seller_token', data.accessToken);
+         localStorage.setItem('seller_refresh_token', data.refreshToken);
+         localStorage.setItem('seller_info', JSON.stringify(sellerData));
+         document.cookie = `seller_token=${data.accessToken}; path=/; max-age=900; samesite=lax;`;
+         document.cookie = `seller_refresh_token=${data.refreshToken}; path=/; max-age=604800; samesite=lax;`;
+         document.cookie = `seller_info=${encodeURIComponent(JSON.stringify(sellerData))}; path=/; max-age=604800; samesite=lax;`;
+         
+         window.dispatchEvent(new Event('seller_info_updated'));
+
+         if (sellerData.kycStatus === 'NOT_STARTED' || sellerData.onboardingStep < 8) {
+            router.push('/seller/register');
+         } else {
+            router.push('/seller/dashboard');
+         }
+      } else {
+         throw new Error(data.message || 'Failed to link account');
+      }
+    } catch (err: any) {
+       console.error(err);
+       setError(err.message || 'Invalid OTP');
     } finally {
       setLoading(false);
     }
@@ -301,32 +384,110 @@ export default function SellerLogin() {
           {/* White Login Card */}
           <div className="bg-white border border-[#EAECF0] rounded-2xl p-6 sm:p-8 shadow-[0_1px_3px_rgba(16,24,40,0.08)] space-y-6">
             
-            {/* Mode Switcher Tabs */}
-            <div className="flex border-b border-[#E4E7EC]">
-              <button
-                type="button"
-                onClick={() => { setAuthMode('PASSWORD'); setError(''); }}
-                className={`pb-3 px-4 text-sm font-semibold transition-all border-b-2 cursor-pointer ${
-                  authMode === 'PASSWORD'
-                    ? 'border-[#FF6B2C] text-[#0B1F3A] font-bold'
-                    : 'border-transparent text-[#667085] hover:text-[#172033]'
-                }`}
-              >
-                Email & Password
-              </button>
+            {requireOtpLink ? (
+              <div className="space-y-5">
+                <div className="bg-[#FFF8F1] border border-[#FFD8C4] rounded-lg p-4">
+                  <h3 className="text-[#0B1F3A] font-bold text-sm mb-1">Account Found</h3>
+                  <p className="text-[#667085] text-xs leading-relaxed">
+                    We found an existing HinchMart seller account with the email <span className="font-semibold">{linkEmail}</span>.
+                    To securely connect your Google account: <span className="font-bold text-[#FF6B2C]">Verify Mobile OTP</span>
+                  </p>
+                </div>
+                
+                {!otpSent ? (
+                  <form onSubmit={handleSendLinkOtp} className="space-y-4">
+                    <div>
+                      <label className="block text-xs sm:text-sm font-semibold text-[#172033] mb-1.5">
+                        Registered Mobile Number
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#667085] font-medium">+91</span>
+                        <input
+                          type="text"
+                          required
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                          placeholder={`Enter mobile ending in ${linkMaskedPhone.slice(-4)}`}
+                          maxLength={10}
+                          className="input-b2b pl-12"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={loading || phone.length !== 10}
+                      className="btn-primary w-full h-[46px]"
+                    >
+                      {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Send OTP'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setRequireOtpLink(false); setPhone(''); setOtpSent(false); }}
+                      className="w-full text-center text-xs font-semibold text-[#667085] hover:text-[#172033]"
+                    >
+                      Cancel
+                    </button>
+                  </form>
+                ) : (
+                  <div className="space-y-5">
+                    <div>
+                      <label className="block text-xs sm:text-sm font-semibold text-[#172033] mb-2 text-center">
+                        Enter 6-digit OTP sent to +91 {phone}
+                      </label>
+                      <div className="flex justify-center gap-2 sm:gap-3">
+                        {otpValues.map((digit, i) => (
+                          <input
+                            key={i}
+                            id={`otp-input-${i}`}
+                            type="text"
+                            maxLength={1}
+                            value={digit}
+                            onChange={(e) => handleOtpInput(i, e.target.value)}
+                            className="w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-bold bg-white border border-[#D0D5DD] rounded-xl focus:border-[#FF6B2C] focus:ring-4 focus:ring-[#FF6B2C]/10 outline-none transition-all"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleVerifyLinkOtp}
+                      disabled={loading || otpValues.join('').length !== 6}
+                      className="btn-primary w-full h-[46px]"
+                    >
+                      {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Verify & Link Account'}
+                    </button>
+                  </div>
+                )}
+                <div id="recaptcha-container" className="hidden"></div>
+              </div>
+            ) : (
+              <>
+                {/* Mode Switcher Tabs */}
+                <div className="flex border-b border-[#E4E7EC]">
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode('PASSWORD'); setError(''); }}
+                    className={`pb-3 px-4 text-sm font-semibold transition-all border-b-2 cursor-pointer ${
+                      authMode === 'PASSWORD'
+                        ? 'border-[#FF6B2C] text-[#0B1F3A] font-bold'
+                        : 'border-transparent text-[#667085] hover:text-[#172033]'
+                    }`}
+                  >
+                    Email & Password
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => { setAuthMode('OTP'); setError(''); }}
-                className={`pb-3 px-4 text-sm font-semibold transition-all border-b-2 cursor-pointer ${
-                  authMode === 'OTP'
-                    ? 'border-[#FF6B2C] text-[#0B1F3A] font-bold'
-                    : 'border-transparent text-[#667085] hover:text-[#172033]'
-                }`}
-              >
-                Mobile OTP
-              </button>
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode('OTP'); setError(''); }}
+                    className={`pb-3 px-4 text-sm font-semibold transition-all border-b-2 cursor-pointer ${
+                      authMode === 'OTP'
+                        ? 'border-[#FF6B2C] text-[#0B1F3A] font-bold'
+                        : 'border-transparent text-[#667085] hover:text-[#172033]'
+                    }`}
+                  >
+                    Mobile OTP
+                  </button>
+                </div>
 
             {/* Error Notification Toast */}
             <AnimatePresence>
@@ -486,6 +647,8 @@ export default function SellerLogin() {
               Continue with Google
             </button>
 
+            </>
+            )}
           </div>
 
           {/* Footer Action: Create Seller Account */}
