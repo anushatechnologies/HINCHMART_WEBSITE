@@ -10,6 +10,7 @@ export default function Step3BasicInfo() {
   const [brands, setBrands] = useState<any[]>([]);
   const [loadingBrands, setLoadingBrands] = useState(true);
 
+  useEffect(() => {
     const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
     fetch(`${API}/api/brands`)
       .then(res => res.json())

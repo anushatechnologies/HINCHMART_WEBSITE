@@ -15,8 +15,7 @@ export default function ForgotPassword() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('');
-
+    try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
       const res = await fetch(`${apiUrl}/api/vendors/forgot-password`, {
         method: 'POST',

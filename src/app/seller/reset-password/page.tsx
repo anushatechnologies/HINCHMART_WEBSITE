@@ -34,9 +34,7 @@ export default function ResetPassword() {
       return;
     }
 
-    setLoading(true);
-    setMessage('');
-
+    try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com';
       const res = await fetch(`${apiUrl}/api/vendors/reset-password`, {
         method: 'POST',
