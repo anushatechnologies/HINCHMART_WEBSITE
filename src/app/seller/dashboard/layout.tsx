@@ -7,10 +7,9 @@ import {
   LayoutDashboard, Package, Tag, Layers, Boxes, Warehouse, ShoppingCart,
   Users, Megaphone, Wallet, BarChart3, Settings, ExternalLink, LogOut,
   ChevronRight, Search, Bell, Menu, X, Building2, Lock, Gift, User, FileText,
-  Plus, ShieldCheck, ChevronDown, Sparkles
+  Plus, ShieldCheck, ChevronDown, Sparkles, HelpCircle, Truck, Star
 } from 'lucide-react';
 import CommandPalette from '@/components/seller/CommandPalette';
-import WelcomeModal from '@/components/seller/WelcomeModal';
 
 interface NavItem {
   name: string;
@@ -50,6 +49,8 @@ const NAV_GROUPS: NavGroup[] = [
       { name: 'Customer Orders', href: '/seller/dashboard/orders', icon: ShoppingCart, badge: 'Live' },
       { name: 'B2B Customers', href: '/seller/dashboard/customers', icon: Users },
       { name: 'Marketing & Ads', href: '/seller/dashboard/marketing', icon: Megaphone },
+      { name: 'Reviews', href: '/seller/dashboard/reviews', icon: Star },
+      { name: 'Logistics', href: '/seller/dashboard/shipping', icon: Truck },
     ]
   },
   {
@@ -67,7 +68,7 @@ function SidebarLink({ item, isActive, isLocked }: { item: NavItem; isActive: bo
   if (isLocked) {
     return (
       <div
-        className="flex items-center justify-between px-3 py-2 rounded-xl text-slate-400 opacity-50 cursor-not-allowed text-xs font-semibold select-none"
+        className="flex items-center justify-between px-3 py-2 rounded-lg text-slate-400 opacity-50 cursor-not-allowed text-xs font-semibold select-none"
         title="Complete onboarding verification to unlock"
       >
         <div className="flex items-center gap-3">
@@ -83,10 +84,10 @@ function SidebarLink({ item, isActive, isLocked }: { item: NavItem; isActive: bo
       href={item.href}
       prefetch={true}
       className={`
-        flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 group
+        flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-150 group
         ${isActive
-          ? 'bg-gradient-to-r from-[#FF5722] to-[#FF7043] text-white shadow-md shadow-orange-500/20'
-          : 'text-slate-300 hover:text-white hover:bg-white/10'
+          ? 'bg-[#FF6B2C] text-white font-bold shadow-xs'
+          : 'text-[#CBD5E1] hover:text-white hover:bg-white/10'
         }
       `}
     >
@@ -95,8 +96,8 @@ function SidebarLink({ item, isActive, isLocked }: { item: NavItem; isActive: bo
         <span>{item.name}</span>
       </div>
       {item.badge && (
-        <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full ${
-          isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-[#FF5722]'
+        <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md ${
+          isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-[#FF6B2C]'
         }`}>
           {item.badge}
         </span>
@@ -106,61 +107,22 @@ function SidebarLink({ item, isActive, isLocked }: { item: NavItem; isActive: bo
 }
 
 export default function SellerDashboardLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname() || '/seller/dashboard';
+  const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-
   const [sellerName, setSellerName] = useState('Anusha Bazaar');
   const [sellerStatus, setSellerStatus] = useState('APPROVED');
-  const [onboardingProgress, setOnboardingProgress] = useState(100);
-
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setCommandPaletteOpen(prev => !prev);
-      }
-    };
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setProfileDropdownOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     const loadInfo = () => {
-      const token = localStorage.getItem('seller_token');
-      if (!token) {
-        router.push('/seller/login');
-        return;
-      }
       const info = localStorage.getItem('seller_info');
       if (info) {
         try {
           const parsed = JSON.parse(info);
           setSellerName(parsed.companyName || parsed.ownerName || 'Anusha Bazaar');
           setSellerStatus(parsed.status || 'APPROVED');
-          let progress = 100;
-          if (parsed.status === 'ACTIVE' || parsed.status === 'APPROVED') {
-            progress = 100;
-          } else if (parsed.onboardingStep) {
-            progress = Math.min(100, Math.round((parsed.onboardingStep / 8) * 100));
-          } else {
-            progress = parsed.onboardingProgress || 100;
-          }
-          setOnboardingProgress(progress);
         } catch {}
       }
     };
@@ -171,7 +133,6 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
 
   const handleLogout = async () => {
     try {
-      // Revoke refresh token in DB
       const refreshToken = localStorage.getItem('seller_refresh_token');
       if (refreshToken) {
         await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.hinchmart.com'}/api/auth/logout`, {
@@ -180,9 +141,8 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
           body: JSON.stringify({ refreshToken })
         });
       }
-    } catch { /* ignore errors on logout */ }
+    } catch {}
 
-    // Clear all local tokens
     localStorage.removeItem('seller_token');
     localStorage.removeItem('seller_refresh_token');
     localStorage.removeItem('seller_info');
@@ -191,7 +151,7 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
     document.cookie = 'seller_refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
     document.cookie = 'seller_info=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
 
-    router.push('/seller');
+    router.push('/seller/login');
   };
 
   const isApproved = sellerStatus === 'ACTIVE' || sellerStatus === 'APPROVED';
@@ -199,58 +159,62 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
   const pageTitle = pathname.split('/').pop()?.replace(/-/g, ' ') || 'Dashboard';
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-[#0A111E] flex font-sans text-slate-100">
+    <div className="h-screen w-full overflow-hidden bg-[#F7F9FC] flex font-sans text-[#172033]">
+      
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-xs transition-opacity"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* ─── LEFT SIDEBAR (STATIC ON DESKTOP, SLIDE-OVER ON MOBILE) ─── */}
+      {/* ─────────────────────────────────────────────────────────────
+          1. LEFT SIDEBAR (240px, #0B1F3A CORPORATE NAVY)
+         ───────────────────────────────────────────────────────────── */}
       <aside className={`
-        fixed lg:static inset-y-0 left-0 z-50 w-[245px] h-full bg-[#0A111E] flex flex-col text-white shrink-0
-        transition-transform duration-200 ease-in-out border-r border-slate-800/80
+        fixed lg:static inset-y-0 left-0 z-50 w-[240px] h-full bg-[#0B1F3A] flex flex-col text-white shrink-0
+        transition-transform duration-200 ease-in-out border-r border-[#102A43]
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        {/* Official Brand Logo Header */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800/80 shrink-0 bg-[#0B1426]/60 backdrop-blur-md">
+        
+        {/* Brand Logo Header */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-[#102A43] shrink-0 bg-[#0B1F3A]">
           <Link href="/seller/dashboard" prefetch={true} className="flex items-center gap-2.5">
-            <div className="bg-white p-1.5 rounded-xl shadow-lg shadow-black/20 flex items-center justify-center border border-white/20">
-              <img src="/logo.png" alt="HinchMart" className="h-7 w-auto max-w-[125px] object-contain" />
+            <div className="bg-white px-2.5 py-1 rounded-lg shadow-sm flex items-center justify-center border border-white/20">
+              <img src="/logo.png" alt="HinchMart" className="h-6 w-auto max-w-[110px] object-contain" />
             </div>
-            <span className="text-[10px] font-black uppercase text-[#FF5722] bg-[#FF5722]/10 px-2 py-0.5 rounded-md border border-[#FF5722]/30 tracking-wider shadow-xs">
+            <span className="text-[9px] font-bold uppercase text-[#FF6B2C] bg-[#FFF1EA] px-1.5 py-0.5 rounded tracking-wider">
               Seller
             </span>
           </Link>
-          <button className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10" onClick={() => setSidebarOpen(false)}>
+          <button className="lg:hidden p-1 rounded-md text-slate-400 hover:text-white" onClick={() => setSidebarOpen(false)}>
             <X size={18} />
           </button>
         </div>
 
-        {/* Seller profile card */}
-        <div className="px-3 py-3.5 border-b border-slate-800/80 shrink-0 bg-[#0B1426]/40">
-          <Link href="/seller/dashboard/profile" className="flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] transition-all group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF5722] to-[#FF8A65] flex items-center justify-center text-white text-xs font-black shrink-0 shadow-md shadow-orange-500/20 border border-white/20">
+        {/* Seller Profile Card */}
+        <div className="px-3 py-3 border-b border-[#102A43] shrink-0 bg-[#102A43]/40">
+          <Link href="/seller/dashboard/profile" className="flex items-center gap-3 px-2.5 py-2 rounded-lg bg-white/[0.05] hover:bg-white/10 transition-all group">
+            <div className="w-8 h-8 rounded-lg bg-[#FF6B2C] flex items-center justify-center text-white text-xs font-bold shrink-0">
               {initials}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-white text-xs font-black truncate group-hover:text-[#FF8A65] transition-colors">{sellerName}</p>
-              <p className="text-[#00E676] text-[10px] font-extrabold flex items-center gap-1 mt-0.5">
-                <span className="w-1.5 h-1.5 bg-[#00E676] rounded-full animate-pulse inline-block shadow-xs" />Verified Seller
+              <p className="text-white text-xs font-bold truncate group-hover:text-[#FF6B2C] transition-colors">{sellerName}</p>
+              <p className="text-[#16A34A] text-[10px] font-semibold flex items-center gap-1 mt-0.5">
+                <span className="w-1.5 h-1.5 bg-[#16A34A] rounded-full inline-block" />Verified Seller
               </p>
             </div>
           </Link>
         </div>
 
-        {/* Independent Scrollable Navigation Bar */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20">
+        {/* Scrollable Navigation Menu */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
           {NAV_GROUPS.map(group => (
             <div key={group.label} className="space-y-1">
-              <div className="flex items-center gap-2 px-3 mb-1.5">
-                <span className="w-1 h-3 rounded-full bg-[#FF5722]" />
-                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.18em]">{group.label}</p>
+              <div className="flex items-center gap-2 px-3 mb-1">
+                <span className="w-1 h-2.5 rounded-full bg-[#FF6B2C]" />
+                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">{group.label}</p>
               </div>
               <div className="space-y-1">
                 {group.items.map(item => {
@@ -266,162 +230,131 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
         </nav>
 
         {/* Bottom Logout Action */}
-        <div className="px-3 py-3.5 border-t border-slate-800/80 shrink-0 bg-[#0B1426]/60 backdrop-blur-md">
+        <div className="px-3 py-3 border-t border-[#102A43] shrink-0 bg-[#0B1F3A]">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-slate-300 hover:text-red-400 hover:bg-red-500/10 text-xs font-bold transition-all cursor-pointer"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-500/10 text-xs font-semibold transition-all cursor-pointer"
           >
             <LogOut size={15} /> Logout Account
           </button>
         </div>
       </aside>
 
-      {/* ─── RIGHT MAIN CONTENT AREA ─── */}
+      {/* ─────────────────────────────────────────────────────────────
+          2. RIGHT MAIN CONTENT CANVAS (WHITE HEADER 72px + LIGHT GREY CANVAS)
+         ───────────────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
         
-        {/* World-Class Enterprise Navigation Bar (Sticky Top Bar) */}
-        <header className="h-16 bg-gradient-to-r from-[#0B132B] via-[#0F2537] to-[#1C2541] border-b border-slate-800/80 flex items-center justify-between px-4 sm:px-6 shrink-0 shadow-xl text-white sticky top-0 z-30 backdrop-blur-md">
+        {/* White Top Header (Height 72px, Border #E4E7EC) */}
+        <header className="h-[72px] bg-white border-b border-[#E4E7EC] flex items-center justify-between px-6 shrink-0 sticky top-0 z-30 shadow-xs">
           
-          {/* Left Controls: Hamburger + Breadcrumbs */}
+          {/* Left: Mobile Toggle & Page Greeting */}
           <div className="flex items-center gap-4">
             <button
-              className="lg:hidden p-2 rounded-xl text-slate-300 hover:bg-white/10 transition-all cursor-pointer"
+              className="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu size={20} />
             </button>
 
-            {/* Breadcrumb Path */}
-            <div className="hidden sm:flex items-center gap-2.5 text-xs font-semibold">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/10 border border-white/10 rounded-xl">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">Store Online</span>
-              </div>
-              <span className="text-white/20">|</span>
-              <div className="flex items-center gap-1.5 text-slate-300">
-                <Building2 size={14} className="text-[#FF5722]" />
-                <span>Seller Portal</span>
-                <ChevronRight size={13} className="text-slate-500" />
-                <span className="font-bold text-white uppercase tracking-wide capitalize text-xs">
-                  {pageTitle}
-                </span>
-              </div>
+            <div>
+              <h1 className="text-lg font-bold text-[#172033] capitalize leading-snug">
+                {pageTitle}
+              </h1>
+              <p className="text-xs text-[#667085] font-medium hidden sm:block">
+                Good morning, {sellerName} 👋
+              </p>
             </div>
           </div>
 
-          {/* Right Controls: Quick Add + Search + Notifications + Profile Dropdown */}
+          {/* Right Action Icons & Seller Profile */}
           <div className="flex items-center gap-3">
             
-            {/* Quick Add Product Button */}
+            {/* Search Button */}
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="p-2.5 text-[#667085] hover:text-[#172033] hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
+              title="Search products, orders, customers..."
+            >
+              <Search size={18} />
+            </button>
+
+            {/* Notifications Bell */}
+            <Link
+              href="/seller/dashboard/notifications"
+              className="p-2.5 text-[#667085] hover:text-[#172033] hover:bg-slate-100 rounded-lg transition-all relative cursor-pointer"
+              title="Notifications"
+            >
+              <Bell size={18} />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-[#FF6B2C] rounded-full" />
+            </Link>
+
+            {/* Help Button */}
+            <Link
+              href="/seller/dashboard/support"
+              className="p-2.5 text-[#667085] hover:text-[#172033] hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
+              title="Help & Support"
+            >
+              <HelpCircle size={18} />
+            </Link>
+
+            {/* Divider */}
+            <div className="h-6 w-px bg-[#E4E7EC] mx-1" />
+
+            {/* Add Product Orange Button */}
             <Link
               href="/seller/dashboard/products/add"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#FF5722] to-[#FF7043] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs font-black rounded-xl shadow-md shadow-orange-500/20 transition-all hover:scale-105 active:scale-95"
+              className="hidden sm:flex items-center gap-1.5 px-4 py-2 bg-[#FF6B2C] hover:bg-[#E9551C] text-white text-xs font-semibold rounded-lg shadow-xs transition-all cursor-pointer"
             >
               <Plus size={15} /> Add Product
             </Link>
 
-            {/* Quick Command Search ⌘K */}
-            <button
-              onClick={() => setCommandPaletteOpen(true)}
-              className="hidden md:flex items-center gap-2 px-3.5 py-1.5 bg-white/10 hover:bg-white/20 border border-white/15 rounded-xl text-xs text-slate-200 transition-all cursor-pointer shadow-sm group"
-            >
-              <Search size={14} className="text-[#FF5722]" />
-              <span className="font-semibold group-hover:text-white">Search or jump to...</span>
-              <kbd className="ml-2 text-[10px] bg-black/30 border border-white/20 text-slate-300 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
-            </button>
-
-            {/* Notifications */}
-            <button className="relative p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer">
-              <Bell size={18} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF5722] rounded-full ring-2 ring-[#0F2537]" />
-            </button>
-
-            <div className="h-6 w-px bg-white/10" />
-
-            {/* ─── INTERACTIVE PROFILE DROPDOWN MENU ─── */}
-            <div className="relative" ref={dropdownRef}>
+            {/* Seller Avatar Dropdown */}
+            <div className="relative">
               <button
-                onClick={() => setProfileDropdownOpen(prev => !prev)}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer group"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 transition-all cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#FF5722] to-[#FF7043] flex items-center justify-center text-white text-xs font-black shadow-md shadow-orange-500/20">
+                <div className="w-8 h-8 rounded-lg bg-[#0B1F3A] text-white font-bold text-xs flex items-center justify-center">
                   {initials}
                 </div>
-                <div className="hidden sm:block text-left">
-                  <p className="text-xs font-bold text-white leading-none group-hover:text-[#FF7043] transition-colors">{sellerName}</p>
-                  <p className="text-[10px] text-emerald-400 font-medium mt-0.5">Verified Merchant</p>
-                </div>
-                <ChevronDown size={14} className={`text-slate-400 transition-transform ${profileDropdownOpen ? 'rotate-180 text-white' : ''}`} />
+                <ChevronDown size={14} className="text-[#667085]" />
               </button>
 
-              {/* Floating Dropdown Window */}
-              {profileDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-[#0F2537] border border-white/15 rounded-2xl shadow-2xl p-2 z-50 text-white space-y-1 backdrop-blur-xl animate-in fade-in slide-in-from-top-2">
-                  <div className="px-3 py-2.5 border-b border-white/10 mb-1">
-                    <p className="text-xs font-black text-white">{sellerName}</p>
-                    <p className="text-[10px] text-slate-300 font-mono mt-0.5">ID: HM-SELLER-9042</p>
-                    <span className="inline-block text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 mt-1">
-                      ✓ Verified Partner (0% Fee)
-                    </span>
+              {userMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-[#E4E7EC] rounded-xl shadow-lg p-1.5 z-50 space-y-1">
+                  <div className="px-3 py-2 border-b border-[#E4E7EC]">
+                    <p className="text-xs font-bold text-[#172033] truncate">{sellerName}</p>
+                    <p className="text-[11px] text-[#667085] truncate">Seller ID: HM-{sellerName.slice(0, 3).toUpperCase()}</p>
                   </div>
 
-                  <Link
-                    href="/seller/dashboard/profile"
-                    onClick={() => setProfileDropdownOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:text-white hover:bg-white/10 transition-colors"
-                  >
-                    <User size={15} className="text-[#FF5722]" /> Store Profile
+                  <Link href="/seller/dashboard/profile" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-[#172033] hover:bg-[#FFF1EA] hover:text-[#FF6B2C] rounded-lg">
+                    <User size={14} /> Store Profile
                   </Link>
 
-                  <Link
-                    href="/seller/dashboard/documents"
-                    onClick={() => setProfileDropdownOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:text-white hover:bg-white/10 transition-colors"
-                  >
-                    <FileText size={15} className="text-[#FF7043]" /> Documents & KYC
+                  <Link href="/seller/dashboard/settings" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-[#172033] hover:bg-[#FFF1EA] hover:text-[#FF6B2C] rounded-lg">
+                    <Settings size={14} /> Account Settings
                   </Link>
 
-                  <Link
-                    href="/seller/dashboard/settings"
-                    onClick={() => setProfileDropdownOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:text-white hover:bg-white/10 transition-colors"
-                  >
-                    <Settings size={15} className="text-slate-400" /> Store Settings
-                  </Link>
-
-                  <div className="pt-1 border-t border-white/10">
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                    >
-                      <LogOut size={15} /> Logout Account
-                    </button>
-                  </div>
+                  <button onClick={handleLogout} className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-[#DC2626] hover:bg-red-50 rounded-lg cursor-pointer">
+                    <LogOut size={14} /> Logout Account
+                  </button>
                 </div>
               )}
             </div>
 
           </div>
+
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+        {/* Dynamic Page Canvas (Light Grey #F7F9FC) */}
+        <main className="flex-1 p-6 sm:p-8 bg-[#F7F9FC] max-w-7xl w-full mx-auto">
           {children}
         </main>
 
-        <CommandPalette
-          isOpen={commandPaletteOpen}
-          onClose={() => setCommandPaletteOpen(false)}
-        />
-
-        <WelcomeModal
-          type="INITIAL_REGISTRATION"
-          isOpen={showWelcomeModal}
-          onClose={() => setShowWelcomeModal(false)}
-          vendorName={sellerName}
-          progress={onboardingProgress}
-        />
       </div>
+
+      <CommandPalette isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 }
