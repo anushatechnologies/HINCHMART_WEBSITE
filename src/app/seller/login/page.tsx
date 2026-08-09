@@ -66,36 +66,10 @@ export default function SellerLogin() {
             router.push('/seller/dashboard');
          }
       } else {
-        const username = email ? email.split('@')[0] : 'Apex Seller';
-        const formattedName = username.charAt(0).toUpperCase() + username.slice(1);
-        const info = {
-          id: Date.now(),
-          companyName: formattedName + ' Enterprise',
-          ownerName: formattedName,
-          contactEmail: email || 'seller@hinchmart.com',
-          status: 'APPROVED',
-          onboardingStep: 8,
-          onboardingProgress: 100
-        };
-        const token = 'seller_token_' + Date.now();
-        const refreshToken = 'seller_refresh_token_' + Date.now();
-        storeSessionAndRedirect(token, refreshToken, info);
+        setError(data.message || 'Invalid email or password');
       }
-    } catch {
-      const username = email ? email.split('@')[0] : 'Apex Seller';
-      const formattedName = username.charAt(0).toUpperCase() + username.slice(1);
-      const info = {
-        id: Date.now(),
-        companyName: formattedName + ' Enterprise',
-        ownerName: formattedName,
-        contactEmail: email || 'seller@hinchmart.com',
-        status: 'APPROVED',
-        onboardingStep: 8,
-        onboardingProgress: 100
-      };
-      const token = 'seller_token_' + Date.now();
-      const refreshToken = 'seller_refresh_token_' + Date.now();
-      storeSessionAndRedirect(token, refreshToken, info);
+    } catch (err: any) {
+      setError(err.message || 'Login request failed. Please try again.');
     } finally {
       setLoading(false);
     }

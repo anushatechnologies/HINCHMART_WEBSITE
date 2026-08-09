@@ -38,6 +38,7 @@ export default function SellerRegister() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [firebasePhoneToken, setFirebasePhoneToken] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -150,7 +151,9 @@ export default function SellerRegister() {
     setLoading(true);
     try {
       if (!confirmationResult) throw new Error('No OTP session found.');
-      await confirmationResult.confirm(enteredOtp);
+      const result = await confirmationResult.confirm(enteredOtp);
+      const idToken = await result.user.getIdToken();
+      setFirebasePhoneToken(idToken);
       setFormData(prev => ({ ...prev, phoneVerified: true }));
       setError('');
       nextStep();
@@ -192,29 +195,42 @@ export default function SellerRegister() {
 
   // --- Submit Final Application ---
   const handleSubmitFinal = async () => {
-    setLoading(true);
-    // Here we would call POST /api/vendors/onboarding/complete
-    // For now we simulate success and route to dashboard
-    setTimeout(() => {
-      const existingToken = localStorage.getItem('seller_token');
-      
-      const newInfo = {
-        id: Date.now(),
-        companyName: formData.companyName,
+    setLoading(true); setError('');
+    try {
+      const payload = {
+        ...formData,
         contactEmail: formData.contactEmail,
         contactPhone: formData.phone,
-        status: 'ONBOARDING',
-        kycStatus: 'UNDER_REVIEW',
-        onboardingStep: 8,
-        onboardingProgress: 100
+        firebasePhoneToken,
+        skipVerification: true
       };
 
-      if (existingToken) {
-         localStorage.setItem('seller_info', JSON.stringify(newInfo));
-         window.dispatchEvent(new Event('seller_info_updated'));
+      const res = await fetch('/api/seller/auth/register', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (data.success && (data.accessToken || data.token)) {
+        const sellerData = data.data;
+        const token = data.accessToken || data.token;
+        localStorage.setItem('seller_token', token);
+        localStorage.setItem('seller_refresh_token', data.refreshToken);
+        localStorage.setItem('seller_info', JSON.stringify(sellerData));
+        document.cookie = `seller_token=${token}; path=/; max-age=900; samesite=lax;`;
+        document.cookie = `seller_refresh_token=${data.refreshToken}; path=/; max-age=604800; samesite=lax;`;
+        document.cookie = `seller_info=${encodeURIComponent(JSON.stringify(sellerData))}; path=/; max-age=604800; samesite=lax;`;
+        
+        window.dispatchEvent(new Event('seller_info_updated'));
+        router.push('/seller/dashboard');
+      } else {
+        setError(data.message || 'Registration failed');
       }
-      router.push('/seller/dashboard');
-    }, 1500);
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
