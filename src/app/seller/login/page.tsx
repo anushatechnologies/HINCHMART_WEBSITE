@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Eye, EyeOff, Loader2, ShieldCheck, Check, Phone, Mail, Sparkles, Building2, Package, CheckCircle2 } from 'lucide-react';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 export default function SellerLogin() {
@@ -21,6 +21,7 @@ export default function SellerLogin() {
   const [phone, setPhone] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -48,9 +49,22 @@ export default function SellerLogin() {
       });
       const data = await res.json();
       if (data.success && (data.accessToken || data.token)) {
-        const accessToken = data.accessToken || data.token;
-        const refreshToken = data.refreshToken || '';
-        storeSessionAndRedirect(accessToken, refreshToken, data.data);
+         const sellerData = data.data;
+         const token = data.accessToken || data.token;
+         localStorage.setItem('seller_token', token);
+         localStorage.setItem('seller_refresh_token', data.refreshToken);
+         localStorage.setItem('seller_info', JSON.stringify(sellerData));
+         document.cookie = `seller_token=${token}; path=/; max-age=900; samesite=lax;`;
+         document.cookie = `seller_refresh_token=${data.refreshToken}; path=/; max-age=604800; samesite=lax;`;
+         document.cookie = `seller_info=${encodeURIComponent(JSON.stringify(sellerData))}; path=/; max-age=604800; samesite=lax;`;
+         
+         window.dispatchEvent(new Event('seller_info_updated'));
+
+         if (sellerData.kycStatus === 'NOT_STARTED' || sellerData.onboardingStep < 8) {
+            router.push('/seller/register');
+         } else {
+            router.push('/seller/dashboard');
+         }
       } else {
         const username = email ? email.split('@')[0] : 'Apex Seller';
         const formattedName = username.charAt(0).toUpperCase() + username.slice(1);
@@ -87,18 +101,45 @@ export default function SellerLogin() {
     }
   };
 
-  const handleSendOtp = (e: React.FormEvent) => {
+  const setupRecaptcha = () => {
+    if (!(window as any).recaptchaVerifier) {
+      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+        callback: () => {},
+        'expired-callback': () => { setError('Recaptcha expired. Please try again.'); }
+      });
+    }
+  };
+
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone || phone.length < 10) {
       setError('Please enter a valid 10-digit mobile number.');
       return;
     }
     setError('');
-    setOtpValues(['1', '2', '3', '4', '5', '6']);
-    setOtpSent(true);
+    setLoading(true);
+    try {
+      setupRecaptcha();
+      const appVerifier = (window as any).recaptchaVerifier;
+      const formattedPhone = `+91${phone}`;
+      const confirmResult = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
+      setConfirmationResult(confirmResult);
+      setOtpSent(true);
+      setOtpValues(['', '', '', '', '', '']);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to send OTP. Please try again.');
+      if ((window as any).recaptchaVerifier) {
+        (window as any).recaptchaVerifier.clear();
+        (window as any).recaptchaVerifier = undefined;
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleVerifyOtpSubmit = (e: React.FormEvent) => {
+  const handleVerifyOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const enteredOtp = otpValues.join('');
     if (enteredOtp.length < 6) {
@@ -106,17 +147,42 @@ export default function SellerLogin() {
       return;
     }
     setLoading(true);
-    const info = {
-      id: Date.now(),
-      companyName: 'Verified Mobile Merchant',
-      ownerName: 'Mobile Seller',
-      contactEmail: `seller.${phone}@hinchmart.com`,
-      contactPhone: phone,
-      status: 'APPROVED',
-      onboardingStep: 8,
-      onboardingProgress: 100
-    };
-    storeSessionAndRedirect('token_otp_' + Date.now(), 'ref_otp_' + Date.now(), info);
+    try {
+      if (!confirmationResult) throw new Error('No OTP session found.');
+      const result = await confirmationResult.confirm(enteredOtp);
+      const idToken = await result.user.getIdToken();
+      
+      const res = await fetch('/api/seller/auth/verify-firebase', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: idToken, phone: result.user.phoneNumber })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+         const sellerData = data.data;
+         localStorage.setItem('seller_token', data.accessToken);
+         localStorage.setItem('seller_refresh_token', data.refreshToken);
+         localStorage.setItem('seller_info', JSON.stringify(sellerData));
+         document.cookie = `seller_token=${data.accessToken}; path=/; max-age=900; samesite=lax;`;
+         document.cookie = `seller_refresh_token=${data.refreshToken}; path=/; max-age=604800; samesite=lax;`;
+         document.cookie = `seller_info=${encodeURIComponent(JSON.stringify(sellerData))}; path=/; max-age=604800; samesite=lax;`;
+         
+         window.dispatchEvent(new Event('seller_info_updated'));
+
+         if (sellerData.kycStatus === 'NOT_STARTED' || sellerData.onboardingStep < 8) {
+            router.push('/seller/register');
+         } else {
+            router.push('/seller/dashboard');
+         }
+      } else {
+         throw new Error(data.message || 'Failed to authenticate on backend');
+      }
+    } catch (err: any) {
+       console.error(err);
+       setError(err.message || 'Invalid OTP');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOtpInput = (index: number, val: string) => {
@@ -135,32 +201,36 @@ export default function SellerLogin() {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      const googleSeller = {
-        id: Date.now(),
-        companyName: (user.displayName || 'Google Merchant') + ' Trading Co.',
-        ownerName: user.displayName || 'Seller',
-        contactEmail: user.email || 'seller.google@hinchmart.com',
-        status: 'APPROVED',
-        onboardingStep: 8,
-        onboardingProgress: 100
-      };
-      const token = 'google_token_' + Date.now();
-      const refreshToken = 'google_refresh_token_' + Date.now();
-      storeSessionAndRedirect(token, refreshToken, googleSeller);
-    } catch {
-      const demoGoogleSeller = {
-        id: Date.now(),
-        companyName: 'Apex Hardware & Steel (Google)',
-        ownerName: 'Ramesh Sharma',
-        contactEmail: 'ramesh.google@hinchmart.com',
-        status: 'APPROVED',
-        onboardingStep: 8,
-        onboardingProgress: 100
-      };
-      const token = 'google_seller_token_' + Date.now();
-      const refreshToken = 'google_refresh_token_' + Date.now();
-      storeSessionAndRedirect(token, refreshToken, demoGoogleSeller);
+      const idToken = await result.user.getIdToken();
+      
+      const res = await fetch('/api/seller/auth/verify-firebase', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: idToken, email: result.user.email, name: result.user.displayName })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+         const sellerData = data.data;
+         localStorage.setItem('seller_token', data.accessToken);
+         localStorage.setItem('seller_refresh_token', data.refreshToken);
+         localStorage.setItem('seller_info', JSON.stringify(sellerData));
+         document.cookie = `seller_token=${data.accessToken}; path=/; max-age=900; samesite=lax;`;
+         document.cookie = `seller_refresh_token=${data.refreshToken}; path=/; max-age=604800; samesite=lax;`;
+         document.cookie = `seller_info=${encodeURIComponent(JSON.stringify(sellerData))}; path=/; max-age=604800; samesite=lax;`;
+         
+         window.dispatchEvent(new Event('seller_info_updated'));
+
+         if (sellerData.kycStatus === 'NOT_STARTED' || sellerData.onboardingStep < 8) {
+            router.push('/seller/register');
+         } else {
+            router.push('/seller/dashboard');
+         }
+      } else {
+         throw new Error(data.message || 'Failed to authenticate on backend');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Google Login Failed');
     } finally {
       setLoading(false);
     }
@@ -387,12 +457,8 @@ export default function SellerLogin() {
                   </form>
                 ) : (
                   <form onSubmit={handleVerifyOtpSubmit} className="space-y-4">
-                    <div className="p-3 rounded-lg bg-[#F0FDF4] border border-[#BBF7D0] text-xs text-[#16A34A] font-semibold space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span>✓ OTP Sent to <strong className="text-[#172033]">+91 {phone}</strong></span>
-                        <span className="bg-[#16A34A] text-white text-[10px] font-bold px-1.5 py-0.5 rounded">Demo Mode</span>
-                      </div>
-                      <p className="text-[11px] text-[#16A34A]/90 font-normal">Use Verification Code: <strong className="font-mono text-sm tracking-widest text-[#0B1F3A]">123456</strong></p>
+                    <div className="text-xs text-[#667085]">
+                      OTP sent to <strong className="text-[#172033]">+91 {phone}</strong> via SMS
                     </div>
 
                     <div className="flex justify-between gap-2 py-1">
@@ -410,13 +476,6 @@ export default function SellerLogin() {
                     </div>
 
                     <div className="flex items-center justify-between text-xs">
-                      <button
-                        type="button"
-                        onClick={() => setOtpValues(['1', '2', '3', '4', '5', '6'])}
-                        className="text-[#FF6B2C] font-bold hover:underline"
-                      >
-                        Auto-fill OTP (123456)
-                      </button>
                       <button type="button" onClick={() => setOtpSent(false)} className="text-[#2563EB] font-semibold hover:underline">
                         Change number
                       </button>
@@ -462,11 +521,10 @@ export default function SellerLogin() {
               Create Seller Account →
             </Link>
           </p>
-
         </div>
-
       </div>
 
+      <div id="recaptcha-container"></div>
     </div>
   );
 }

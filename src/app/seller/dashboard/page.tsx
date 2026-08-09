@@ -8,7 +8,7 @@ import {
   Star, Clock, AlertTriangle, ArrowUpRight, ArrowDownRight, RefreshCcw,
   CheckCircle2, Plus, Sparkles, ShieldCheck, ChevronRight, Eye, Layers,
   Boxes, Calendar, ExternalLink, Filter, Wallet, Zap, FileText, IndianRupee,
-  CheckCircle
+  CheckCircle, Lock
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
@@ -36,7 +36,11 @@ export default function SellerDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [chartTimeframe, setChartTimeframe] = useState<'7D' | '30D' | '90D'>('7D');
   const [sellerName, setSellerName] = useState('Anusha Bazaar');
-  const [sellerStatus, setSellerStatus] = useState('APPROVED');
+  const [sellerInfo, setSellerInfo] = useState({
+    status: 'APPROVED',
+    kycStatus: 'VERIFIED',
+    onboardingProgress: 100
+  });
 
   const [dashboardData, setDashboardData] = useState({
     profileProgress: 75,
@@ -73,7 +77,11 @@ export default function SellerDashboardPage() {
       try {
         const parsed = JSON.parse(info);
         setSellerName(parsed.companyName || parsed.ownerName || 'Anusha Bazaar');
-        setSellerStatus(parsed.status || 'APPROVED');
+        setSellerInfo({
+          status: parsed.status || 'APPROVED',
+          kycStatus: parsed.kycStatus || 'VERIFIED',
+          onboardingProgress: parsed.onboardingProgress || 100
+        });
       } catch {}
     }
     setLoading(false);
@@ -83,7 +91,7 @@ export default function SellerDashboardPage() {
     <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6 font-sans">
       
       {/* ─── 1. ONBOARDING / SELLER PROFILE COMPLETION CARD ─── */}
-      {dashboardData.profileProgress < 100 && (
+      {sellerInfo.onboardingProgress < 100 && (
         <motion.div variants={itemVariants} className="bg-white border border-[#EAECF0] rounded-xl p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2 flex-1">
             <div className="flex items-center gap-2">
@@ -91,32 +99,53 @@ export default function SellerDashboardPage() {
               <h2 className="text-lg font-bold text-[#172033]">Welcome to HinchMart</h2>
             </div>
             <p className="text-xs text-[#667085] font-medium max-w-xl">
-              Complete your seller profile to start selling products and receiving bulk purchase orders from verified B2B buyers across India.
+              {sellerInfo.status === 'ONBOARDING' 
+                ? 'Complete your seller profile to start selling products and receiving bulk purchase orders.'
+                : 'Your KYC is currently under review by our admin team. This usually takes 24-48 hours.'}
             </p>
             
             {/* Orange Progress Bar */}
             <div className="pt-2 max-w-md space-y-1.5">
               <div className="flex justify-between text-xs font-bold">
                 <span className="text-[#172033]">Seller Profile</span>
-                <span className="text-[#FF6B2C]">{dashboardData.profileProgress}% Complete</span>
+                <span className="text-[#FF6B2C]">{sellerInfo.onboardingProgress}% Complete</span>
               </div>
               <div className="w-full h-2.5 bg-[#F8FAFC] rounded-full overflow-hidden border border-[#E4E7EC]">
                 <div
                   className="h-full bg-[#FF6B2C] rounded-full transition-all duration-500"
-                  style={{ width: `${dashboardData.profileProgress}%` }}
+                  style={{ width: `${sellerInfo.onboardingProgress}%` }}
                 />
               </div>
             </div>
           </div>
 
-          <Link
-            href="/seller/dashboard/profile"
-            className="btn-primary px-6 py-2.5 text-xs shrink-0"
-          >
-            Complete Profile →
-          </Link>
+          {sellerInfo.status === 'ONBOARDING' ? (
+            <Link href="/seller/register" className="btn-primary px-6 py-2.5 text-xs shrink-0">
+              Continue Onboarding →
+            </Link>
+          ) : (
+            <div className="px-6 py-2.5 text-xs font-bold text-[#D97706] bg-[#FEF3C7] rounded-lg shrink-0 border border-[#FCD34D]">
+              Under Review ⏳
+            </div>
+          )}
         </motion.div>
       )}
+
+      {/* ─── RESTRICTED STATE WRAPPER ─── */}
+      <div className="relative">
+        {sellerInfo.status !== 'APPROVED' && sellerInfo.status !== 'ACTIVE' && (
+           <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center rounded-2xl border border-white/50">
+              <div className="bg-white p-6 rounded-xl shadow-xl max-w-md text-center border border-[#E4E7EC] shadow-[#0B1F3A]/10">
+                <div className="w-16 h-16 bg-[#FEF3C7] text-[#D97706] rounded-full flex items-center justify-center mx-auto mb-4">
+                   <Lock size={32} />
+                </div>
+                <h3 className="text-xl font-bold text-[#172033] mb-2">Account Restricted</h3>
+                <p className="text-sm text-[#667085] leading-relaxed">
+                  You need an <strong>APPROVED</strong> status to access your financial KPIs, live product catalog, and active orders.
+                </p>
+              </div>
+           </div>
+        )}
 
       {/* ─── 2. EXECUTIVE KPI CARDS (4 WHITE B2B CARDS) ─── */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -306,7 +335,7 @@ export default function SellerDashboardPage() {
           </table>
         </div>
       </motion.div>
-
+      </div>
     </motion.div>
   );
 }
